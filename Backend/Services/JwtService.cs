@@ -18,7 +18,8 @@ namespace Backend.Services
         public string GenerateToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+            var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
+            var key = Encoding.ASCII.GetBytes(jwtKey);
             
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -47,7 +48,8 @@ namespace Backend.Services
             try
             {
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+                var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
+                var key = Encoding.ASCII.GetBytes(jwtKey);
                 
                 var validationParameters = new TokenValidationParameters
                 {

@@ -25,7 +25,7 @@ namespace Backend.Controllers
 
         // POST: api/users/register
         [HttpPost("register")]
-        public async Task<ActionResult<UserResponseDto>> Register(UserRegisterDto registerDto)
+        public async Task<ActionResult<AuthResponseDto>> Register(UserRegisterDto registerDto)
         {
             // Email zaten var mı kontrol et
             if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
@@ -56,23 +56,26 @@ namespace Backend.Controllers
             var token = _jwtService.GenerateToken(user);
 
             // Response DTO'ya çevir
-            var responseDto = new UserResponseDto
+            var response = new AuthResponseDto
             {
-                Id = user.Id,
-                Username = user.Username,
-                Email = user.Email,
-                CreatedAt = user.CreatedAt,
-                IsOnline = user.IsOnline,
-                LastSeen = user.LastSeen,
-                Token = token
+                Token = token,
+                User = new UserResponseDto
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    Email = user.Email,
+                    CreatedAt = user.CreatedAt,
+                    IsOnline = user.IsOnline,
+                    LastSeen = user.LastSeen
+                }
             };
 
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, responseDto);
+            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, response);
         }
 
         // POST: api/users/login
         [HttpPost("login")]
-        public async Task<ActionResult<UserResponseDto>> Login(UserLoginDto loginDto)
+        public async Task<ActionResult<AuthResponseDto>> Login(UserLoginDto loginDto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
 
@@ -89,18 +92,21 @@ namespace Backend.Controllers
             // JWT token oluştur
             var token = _jwtService.GenerateToken(user);
 
-            var responseDto = new UserResponseDto
+            var response = new AuthResponseDto
             {
-                Id = user.Id,
-                Username = user.Username,
-                Email = user.Email,
-                CreatedAt = user.CreatedAt,
-                IsOnline = user.IsOnline,
-                LastSeen = user.LastSeen,
-                Token = token
+                Token = token,
+                User = new UserResponseDto
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    Email = user.Email,
+                    CreatedAt = user.CreatedAt,
+                    IsOnline = user.IsOnline,
+                    LastSeen = user.LastSeen
+                }
             };
 
-            return Ok(responseDto);
+            return Ok(response);
         }
 
         // GET: api/users

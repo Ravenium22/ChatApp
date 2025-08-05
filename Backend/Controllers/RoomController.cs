@@ -3,18 +3,22 @@ using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.Models;
 using Backend.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using Backend.Services;
 
 namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class RoomController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-
-        public RoomController(ApplicationDbContext context)
+        private readonly JwtService _jwtService;
+        public RoomController(ApplicationDbContext context, JwtService jwtService)
         {
             _context = context;
+            _jwtService = jwtService;
         }
 
         // GET: api/rooms - tüm odaları listele
@@ -128,11 +132,15 @@ namespace Backend.Controllers
         [HttpPost]
         public async Task<ActionResult<RoomResponseDto>> CreateRoom([FromBody] CreateRoomDto request)
         {
+            var userId = _jwtService.GetUserIdFromToken(HttpContext.User);
+            if (!userId.HasValue)
+                return Unauthorized();
+
             var room = new Room
             {
                 Name = request.Name,
                 Description = request.Description,
-                CreatedById = request.CreatedById,
+                CreatedById = userId.Value,
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true
             };
@@ -144,7 +152,7 @@ namespace Backend.Controllers
             var roomUser = new RoomUser
             {
                 RoomId = room.Id,
-                UserId = request.CreatedById,
+                UserId = userId.Value,
                 Role = RoomRole.Owner,
                 IsActive = true,
                 JoinedAt = DateTime.UtcNow
@@ -184,8 +192,11 @@ namespace Backend.Controllers
 
         // POST: api/rooms/5/join - odaya katıl
         [HttpPost("{roomId}/join")]
-        public async Task<ActionResult> JoinRoom(int roomId, [FromBody] JoinRoomDto request)
+        public async Task<ActionResult> JoinRoom(int roomId)
         {
+            var userId = _jwtService.GetUserIdFromToken(HttpContext.User);
+            if (!userId.HasValue)
+                return Unauthorized();
             // oda var mı kontrol et
             var room = await _context.Rooms.FindAsync(roomId);
             if (room == null || !room.IsActive)
@@ -193,7 +204,7 @@ namespace Backend.Controllers
 
             // kullanıcı zaten üye mi kontrol et
             var existingMember = await _context.RoomUsers
-                .FirstOrDefaultAsync(ru => ru.RoomId == roomId && ru.UserId == request.UserId);
+                .FirstOrDefaultAsync(ru => ru.RoomId == roomId && ru.UserId == userId.Value);
 
             if (existingMember != null)
             {
@@ -211,7 +222,7 @@ namespace Backend.Controllers
                 var roomUser = new RoomUser
                 {
                     RoomId = roomId,
-                    UserId = request.UserId,
+                    UserId = userId.Value,
                     Role = RoomRole.Member,
                     IsActive = true,
                     JoinedAt = DateTime.UtcNow
@@ -226,10 +237,14 @@ namespace Backend.Controllers
 
         // POST: api/rooms/5/leave - odadan ayrıl
         [HttpPost("{roomId}/leave")]
-        public async Task<ActionResult> LeaveRoom(int roomId, [FromBody] LeaveRoomDto request)
+        public async Task<ActionResult> LeaveRoom(int roomId)
         {
+            var userId = _jwtService.GetUserIdFromToken(HttpContext.User);
+            if (!userId.HasValue)
+                return Unauthorized();
+
             var roomUser = await _context.RoomUsers
-                .FirstOrDefaultAsync(ru => ru.RoomId == roomId && ru.UserId == request.UserId && ru.IsActive);
+                .FirstOrDefaultAsync(ru => ru.RoomId == roomId && ru.UserId == userId.Value && ru.IsActive);
 
             if (roomUser == null)
                 return NotFound("bu odanın üyesi değilsin");
@@ -241,12 +256,16 @@ namespace Backend.Controllers
             return Ok();
         }
 
-        // GET: api/rooms/user/5 - kullanıcının katıldığı odalar
-        [HttpGet("user/{userId}")]
-        public async Task<ActionResult<IEnumerable<UserRoomDto>>> GetUserRooms(int userId)
+        // GET: api/rooms/my - kullanıcının katıldığı odalar
+        [HttpGet("my")]
+        public async Task<ActionResult<IEnumerable<UserRoomDto>>> GetMyRooms()
         {
+            var userId = _jwtService.GetUserIdFromToken(HttpContext.User);
+            if (!userId.HasValue)
+                return Unauthorized();
+
             var userRooms = await _context.RoomUsers
-                .Where(ru => ru.UserId == userId && ru.IsActive)
+                .Where(ru => ru.UserId == userId.Value && ru.IsActive)
                 .Include(ru => ru.Room)
                 .ThenInclude(r => r.CreatedBy)
                 .Where(ru => ru.Room.IsActive)

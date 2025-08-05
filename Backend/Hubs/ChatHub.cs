@@ -91,6 +91,11 @@ namespace Backend.Hubs
 
             // sender bilgilerini çek
             var sender = await _context.Users.FindAsync(senderId);
+            if (sender == null)
+            {
+                await Clients.Caller.SendAsync("Error", "gönderen bulunamadı");
+                return;
+            }
 
             var messageData = new
             {
@@ -117,8 +122,9 @@ namespace Backend.Hubs
             else if (receiverId.HasValue)
             {
                 // alıcıya gönder
-                var receiverConnectionId = UserConnections.GetValueOrDefault(receiverId.ToString());
-                if (receiverConnectionId != null)
+                var receiverKey = receiverId.Value.ToString();
+                if (UserConnections.TryGetValue(receiverKey, out string? receiverConnectionId) && 
+                    receiverConnectionId != null)
                 {
                     await Clients.Client(receiverConnectionId)
                         .SendAsync("ReceivePrivateMessage", messageData);
@@ -141,7 +147,7 @@ namespace Backend.Hubs
                 .SendAsync("UserStoppedTyping", username);
         }
 
-        public override async Task OnDisconnectedAsync(Exception exception)
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
             // user'ı offline yap ve connection'ı sil
             var userId = UserConnections.FirstOrDefault(x => x.Value == Context.ConnectionId).Key;

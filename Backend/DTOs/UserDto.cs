@@ -46,6 +46,11 @@ namespace Backend.DTOs
         public DateTime? LastSeen { get; set; }
         public string? Token { get; set; }
     }
+    public class AuthResponseDto
+{
+    public string Token { get; set; } = string.Empty;
+    public UserResponseDto User { get; set; } = null!;
+}
 
 
 

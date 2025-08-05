@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Backend.Models;
 
 namespace Backend.DTOs
 {
@@ -10,10 +11,7 @@ namespace Backend.DTOs
         
         [StringLength(500)]
         public string? Description { get; set; }
-        
-        [Required]
-        public int CreatedById { get; set; }
-    }
+        }
     
     public class RoomResponseDto
     {
