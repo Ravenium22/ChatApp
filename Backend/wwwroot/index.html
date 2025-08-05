@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        #messages { 
+            border: 1px solid #ddd; 
+            height: 400px; 
+            overflow-y: scroll; 
+            padding: 15px; 
+            margin: 15px 0; 
+            background: #fafafa;
+            border-radius: 8px;
+        }
+        .message { 
+            margin: 8px 0; 
+            padding: 10px; 
+            background: #e3f2fd; 
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+        .private-message {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
+        }
+        .system-message {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            font-style: italic;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        input, button { 
+            padding: 10px; 
+            margin: 2px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #messageInput { 
+            flex: 1;
+            min-width: 300px;
+        }
+        .chat-mode {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .mode-switch {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat Test - WhatsApp Clone</h1>
+        
+        <div class="controls">
+            <input type="number" id="userIdInput" placeholder="Your User ID" value="1" min="1">
+            <button onclick="connect()" id="connectBtn">Connect</button>
+            <button onclick="disconnect()" id="disconnectBtn" disabled>Disconnect</button>
+        </div>
+
+        <div class="mode-switch">
+            <button onclick="switchToGroupMode()" id="groupModeBtn">Group Chat</button>
+            <button onclick="switchToPrivateMode()" id="privateModeBtn">Private Chat</button>
+        </div>
+
+        <div class="chat-mode" id="groupMode">
+            <h3>Group Chat Mode</h3>
+            <div class="controls">
+                <input type="number" id="roomIdInput" placeholder="Room ID" value="1" min="1">
+                <button onclick="joinRoom()" id="joinRoomBtn" disabled>Join Room</button>
+                <button onclick="leaveRoom()" id="leaveRoomBtn" disabled>Leave Room</button>
+            </div>
+        </div>
+
+        <div class="chat-mode" id="privateMode" style="display: none;">
+            <h3>Private Chat Mode</h3>
+            <div class="controls">
+                <input type="number" id="receiverIdInput" placeholder="Receiver User ID" value="2" min="1">
+            </div>
+        </div>
+        
+        <div id="messages"></div>
+        
+        <div class="controls">
+            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)" disabled>
+            <button onclick="sendMessage()" id="sendBtn" disabled>Send</button>
+        </div>
+        
+        <div class="controls">
+            <button onclick="startTyping()" id="typingBtn" disabled>Start Typing</button>
+            <button onclick="stopTyping()" id="stopTypingBtn" disabled>Stop Typing</button>
+        </div>
+    </div>
+
+    <script>
+        let connection = null;
+        let userId = null;
+        let currentMode = 'group'; // 'group' or 'private'
+        let isConnected = false;
+        let isInRoom = false;
+
+        function switchToGroupMode() {
+            currentMode = 'group';
+            document.getElementById('groupMode').style.display = 'block';
+            document.getElementById('privateMode').style.display = 'none';
+            document.getElementById('groupModeBtn').style.background = '#4caf50';
+            document.getElementById('privateModeBtn').style.background = '#2196f3';
+            clearMessages();
+        }
+
+        function switchToPrivateMode() {
+            currentMode = 'private';
+            document.getElementById('groupMode').style.display = 'none';
+            document.getElementById('privateMode').style.display = 'block';
+            document.getElementById('privateModeBtn').style.background = '#4caf50';
+            document.getElementById('groupModeBtn').style.background = '#2196f3';
+            clearMessages();
+        }
+
+        async function connect() {
+            userId = document.getElementById('userIdInput').value;
+            
+            if (!userId) {
+                alert('user id gir');
+                return;
+            }
+            
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chathub")
+                .build();
+
+            // grup mesajı geldiğinde
+            connection.on("ReceiveMessage", function (messageData) {
+                if (currentMode === 'group') {
+                    addMessage(`${messageData.sender.username}: ${messageData.content}`, 'message', messageData.sentAt);
+                }
+            });
+
+            // private mesaj geldiğinde
+            connection.on("ReceivePrivateMessage", function (messageData) {
+                if (currentMode === 'private') {
+                    const isMyMessage = messageData.sender.id == userId;
+                    const prefix = isMyMessage ? 'You' : messageData.sender.username;
+                    addMessage(`${prefix}: ${messageData.content}`, 'private-message', messageData.sentAt);
+                }
+            });
+
+            // kullanıcı online oldu
+            connection.on("UserOnline", function (onlineUserId) {
+                addSystemMessage(`User ${onlineUserId} is now online`);
+            });
+
+            // kullanıcı offline oldu
+            connection.on("UserOffline", function (offlineUserId) {
+                addSystemMessage(`User ${offlineUserId} went offline`);
+            });
+
+            // kullanıcı yazıyor
+            connection.on("UserTyping", function (username) {
+                addSystemMessage(`${username} is typing...`);
+                setTimeout(() => {
+                    removeTypingMessage(username);
+                }, 3000);
+            });
+
+            // kullanıcı yazmayı bıraktı
+            connection.on("UserStoppedTyping", function (username) {
+                removeTypingMessage(username);
+            });
+
+            // hata mesajları
+            connection.on("Error", function (errorMessage) {
+                addSystemMessage(`Error: ${errorMessage}`);
+            });
+
+            try {
+                await connection.start();
+                addSystemMessage("Connected to SignalR hub!");
+                
+                // bağlandıktan sonra chat'e join ol
+                await connection.invoke("JoinChat", userId);
+                
+                isConnected = true;
+                updateButtonStates();
+                
+            } catch (err) {
+                addSystemMessage("Connection failed: " + err.toString());
+            }
+        }
+
+        async function disconnect() {
+            if (connection) {
+                await connection.stop();
+                addSystemMessage("Disconnected from SignalR hub");
+                isConnected = false;
+                isInRoom = false;
+                updateButtonStates();
+            }
+        }
+
+        async function joinRoom() {
+            const roomId = document.getElementById('roomIdInput').value;
+            if (connection && roomId && isConnected) {
+                try {
+                    await connection.invoke("JoinRoom", roomId);
+                    addSystemMessage(`Joined room ${roomId}`);
+                    isInRoom = true;
+                    updateButtonStates();
+                } catch (err) {
+                    addSystemMessage("Join room failed: " + err.toString());
+                }
+            }
+        }
+
+        async function leaveRoom() {
+            const roomId = document.getElementById('roomIdInput').value;
+            if (connection && roomId && isInRoom) {
+                try {
+                    await connection.invoke("LeaveRoom", roomId);
+                    addSystemMessage(`Left room ${roomId}`);
+                    isInRoom = false;
+                    updateButtonStates();
+                } catch (err) {
+                    addSystemMessage("Leave room failed: " + err.toString());
+                }
+            }
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const message = messageInput.value.trim();
+            
+            if (!connection || !message || !userId) return;
+
+            try {
+                if (currentMode === 'group') {
+                    const roomId = document.getElementById('roomIdInput').value;
+                    if (!roomId || !isInRoom) {
+                        addSystemMessage("önce bir odaya katıl");
+                        return;
+                    }
+                    await connection.invoke("SendMessage", message, parseInt(userId), parseInt(roomId), null);
+                } else {
+                    const receiverId = document.getElementById('receiverIdInput').value;
+                    if (!receiverId) {
+                        addSystemMessage("alıcı id'si gir");
+                        return;
+                    }
+                    await connection.invoke("SendMessage", message, parseInt(userId), null, parseInt(receiverId));
+                }
+                
+                messageInput.value = "";
+            } catch (err) {
+                addSystemMessage("Send failed: " + err.toString());
+            }
+        }
+
+        async function startTyping() {
+            if (connection && currentMode === 'group' && isInRoom) {
+                const roomId = document.getElementById('roomIdInput').value;
+                const username = `User${userId}`;
+                await connection.invoke("UserTyping", parseInt(roomId), username);
+            }
+        }
+
+        async function stopTyping() {
+            if (connection && currentMode === 'group' && isInRoom) {
+                const roomId = document.getElementById('roomIdInput').value;
+                const username = `User${userId}`;
+                await connection.invoke("UserStoppedTyping", parseInt(roomId), username);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function addMessage(message, className = 'message', timestamp = null) {
+            const messages = document.getElementById("messages");
+            const div = document.createElement("div");
+            div.className = className;
+            
+            const time = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+            div.innerHTML = `${message} <small style="color: #666;">(${time})</small>`;
+            
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addSystemMessage(message) {
+            addMessage(`📢 ${message}`, 'system-message');
+        }
+
+        function removeTypingMessage(username) {
+            // bu daha complex olur, şimdilik basit tutalım
+        }
+
+        function clearMessages() {
+            document.getElementById("messages").innerHTML = "";
+        }
+
+        function updateButtonStates() {
+            document.getElementById('connectBtn').disabled = isConnected;
+            document.getElementById('disconnectBtn').disabled = !isConnected;
+            document.getElementById('joinRoomBtn').disabled = !isConnected || isInRoom;
+            document.getElementById('leaveRoomBtn').disabled = !isConnected || !isInRoom;
+            document.getElementById('messageInput').disabled = !isConnected || (currentMode === 'group' && !isInRoom);
+            document.getElementById('sendBtn').disabled = !isConnected || (currentMode === 'group' && !isInRoom);
+            document.getElementById('typingBtn').disabled = !isConnected || currentMode !== 'group' || !isInRoom;
+            document.getElementById('stopTypingBtn').disabled = !isConnected || currentMode !== 'group' || !isInRoom;
+        }
+
+        // sayfa yüklendiğinde
+        window.onload = function() {
+            switchToGroupMode();
+            updateButtonStates();
+        };
+    </script>
+</body>
+</html>
