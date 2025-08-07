@@ -17,7 +17,6 @@ builder.Services.AddSwaggerGen();
 // Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
 // SignalR
 builder.Services.AddSignalR();
 
@@ -68,6 +67,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddScoped<NotificationService>();
 
 // CORS
 builder.Services.AddCors(options =>

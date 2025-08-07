@@ -5,16 +5,17 @@ namespace Backend.DTOs
 {
     public class SendMessageDto
     {
-        [Required]
-        public string Content { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty; // Text için Required, file için optional
         
-        [Required]
-        public int SenderId { get; set; }
+        // SenderId kaldırıldı - JWT token'dan gelecek
         
         public int? RoomId { get; set; }
         public int? ReceiverId { get; set; }
         
         public MessageType Type { get; set; } = MessageType.Text;
+        
+        // File attachment desteği
+        public int? FileAttachmentId { get; set; }
     }
     
     public class MessageResponseDto
@@ -30,6 +31,9 @@ namespace Backend.DTOs
         
         public UserResponseDto Sender { get; set; } = null!;
         public UserResponseDto? Receiver { get; set; }
+        
+        // File attachment desteği
+        public FileUploadResponseDto? FileAttachment { get; set; }
     }
     
     public class MarkAsReadDto

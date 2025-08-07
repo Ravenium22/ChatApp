@@ -4,6 +4,7 @@ using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250807124145_AddFileAttachmentSystem")]
+    partial class AddFileAttachmentSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -181,113 +184,6 @@ namespace Backend.Migrations
                     b.HasIndex("SenderId");
 
                     b.ToTable("Messages");
-                });
-
-            modelBuilder.Entity("Backend.Models.Notification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Data")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("RelatedMessageId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("RelatedRoomId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("RelatedUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RelatedMessageId");
-
-                    b.HasIndex("RelatedRoomId");
-
-                    b.HasIndex("RelatedUserId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Notifications");
-                });
-
-            modelBuilder.Entity("Backend.Models.NotificationPreferences", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("DesktopNotifications")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("EmailFriendRequests")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("EmailMessages")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("EmailRoomInvitations")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("FriendRequestNotifications")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("MentionNotifications")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("MessageNotifications")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("RoomNotifications")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("SoundEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("NotificationPreferences");
                 });
 
             modelBuilder.Entity("Backend.Models.Room", b =>
@@ -464,47 +360,6 @@ namespace Backend.Migrations
                     b.Navigation("Room");
 
                     b.Navigation("Sender");
-                });
-
-            modelBuilder.Entity("Backend.Models.Notification", b =>
-                {
-                    b.HasOne("Backend.Models.Message", "RelatedMessage")
-                        .WithMany()
-                        .HasForeignKey("RelatedMessageId");
-
-                    b.HasOne("Backend.Models.Room", "RelatedRoom")
-                        .WithMany()
-                        .HasForeignKey("RelatedRoomId");
-
-                    b.HasOne("Backend.Models.User", "RelatedUser")
-                        .WithMany()
-                        .HasForeignKey("RelatedUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Backend.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("RelatedMessage");
-
-                    b.Navigation("RelatedRoom");
-
-                    b.Navigation("RelatedUser");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Backend.Models.NotificationPreferences", b =>
-                {
-                    b.HasOne("Backend.Models.User", "User")
-                        .WithOne()
-                        .HasForeignKey("Backend.Models.NotificationPreferences", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Backend.Models.Room", b =>

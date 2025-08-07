@@ -1,358 +1,612 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chat Test</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <title>Chat App - Test Panel</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 20px; 
-            background: #f5f5f5;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        #messages { 
-            border: 1px solid #ddd; 
-            height: 400px; 
-            overflow-y: scroll; 
-            padding: 15px; 
-            margin: 15px 0; 
-            background: #fafafa;
-            border-radius: 8px;
-        }
-        .message { 
-            margin: 8px 0; 
-            padding: 10px; 
-            background: #e3f2fd; 
-            border-radius: 8px;
-            border-left: 4px solid #2196f3;
-        }
-        .private-message {
-            background: #e8f5e8;
-            border-left: 4px solid #4caf50;
-        }
-        .system-message {
-            background: #fff3e0;
-            border-left: 4px solid #ff9800;
-            font-style: italic;
-        }
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0;
-            flex-wrap: wrap;
-        }
-        input, button { 
-            padding: 10px; 
-            margin: 2px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        button {
-            background: #2196f3;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #1976d2;
-        }
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        #messageInput { 
-            flex: 1;
-            min-width: 300px;
-        }
-        .chat-mode {
-            background: #f0f0f0;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        .mode-switch {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section { background: white; margin: 10px 0; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
+        .section h3 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+        input, button, select { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .response { background: #f8f9fa; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; }
+        .error { border-left-color: #dc3545; }
+        .success { border-left-color: #28a745; }
+        .controls { margin: 10px 0; }
+        #messages { height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f9f9f9; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Chat Test - WhatsApp Clone</h1>
+        <h1>🚀 Chat App Test Panel</h1>
         
-        <div class="controls">
-            <input type="number" id="userIdInput" placeholder="Your User ID" value="1" min="1">
-            <button onclick="connect()" id="connectBtn">Connect</button>
-            <button onclick="disconnect()" id="disconnectBtn" disabled>Disconnect</button>
-        </div>
-
-        <div class="mode-switch">
-            <button onclick="switchToGroupMode()" id="groupModeBtn">Group Chat</button>
-            <button onclick="switchToPrivateMode()" id="privateModeBtn">Private Chat</button>
-        </div>
-
-        <div class="chat-mode" id="groupMode">
-            <h3>Group Chat Mode</h3>
+        <!-- Auth Section -->
+        <div class="section">
+            <h3>🔐 Authentication</h3>
             <div class="controls">
-                <input type="number" id="roomIdInput" placeholder="Room ID" value="1" min="1">
-                <button onclick="joinRoom()" id="joinRoomBtn" disabled>Join Room</button>
-                <button onclick="leaveRoom()" id="leaveRoomBtn" disabled>Leave Room</button>
+                <input type="text" id="regUsername" placeholder="Username" value="testuser1">
+                <input type="email" id="regEmail" placeholder="Email" value="test1@test.com">
+                <input type="password" id="regPassword" placeholder="Password" value="123456">
+                <button onclick="register()">Register</button>
+            </div>
+            <div class="controls">
+                <input type="email" id="loginEmail" placeholder="Email" value="test1@test.com">
+                <input type="password" id="loginPassword" placeholder="Password" value="123456">
+                <button onclick="login()">Login</button>
+                <button onclick="logout()">Logout</button>
+                <button onclick="getProfile()">Get Profile</button>
+            </div>
+            <div id="authResponse" class="response"></div>
+        </div>
+
+            <!-- File Upload Section -->
+            <div class="section">
+                <h3>📁 File Upload</h3>
+                <div class="controls">
+                    <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.txt">
+                    <button onclick="uploadFile()">Upload File</button>
+                </div>
+                <div class="controls">
+                    <input type="number" id="fileAttachmentId" placeholder="File ID">
+                    <input type="text" id="fileCaption" placeholder="Caption (optional)">
+                    <select id="messageType">
+                        <option value="0">Text</option>
+                        <option value="1">Image</option>
+                        <option value="2">File</option>
+                        <option value="3">Audio</option>
+                        <option value="4">Video</option>
+                    </select>
+                    <button onclick="sendFileMessage()">Send File Message</button>
+                </div>
+                <div id="fileResponse" class="response"></div>
+            </div>
+            <!-- Friends Section -->
+            <div class="section">
+                <h3>👥 Friends</h3>
+                <div class="controls">
+                    <input type="text" id="friendUsername" placeholder="Username/Email" value="testuser2">
+                    <button onclick="sendFriendRequest()">Send Friend Request</button>
+                </div>
+                <div class="controls">
+                    <button onclick="getFriends()">Get Friends</button>
+                    <button onclick="getReceivedRequests()">Get Received Requests</button>
+                    <button onclick="getSentRequests()">Get Sent Requests</button>
+                </div>
+                <div class="controls">
+                    <input type="number" id="requestId" placeholder="Request ID" min="1">
+                    <select id="responseType">
+                        <option value="1">Accept</option>
+                        <option value="2">Reject</option>
+                    </select>
+                    <button onclick="respondToRequest()">Respond</button>
+                </div>
+                <div class="controls">
+                    <input type="number" id="removeFriendId" placeholder="Friend ID" min="1">
+                    <button onclick="removeFriend()">Remove Friend</button>
+                </div>
+                <div id="friendResponse" class="response"></div>
+            </div>
+
+            <!-- Rooms Section -->
+            <div class="section">
+                <h3>🏠 Rooms</h3>
+                <div class="controls">
+                    <input type="text" id="roomName" placeholder="Room Name" value="Test Room">
+                    <input type="text" id="roomDesc" placeholder="Description" value="Test Description">
+                    <button onclick="createRoom()">Create Room</button>
+                </div>
+                <div class="controls">
+                    <button onclick="getRooms()">Get All Rooms</button>
+                    <button onclick="getMyRooms()">Get My Rooms</button>
+                </div>
+                <div class="controls">
+                    <input type="number" id="roomIdJoin" placeholder="Room ID" value="1" min="1">
+                    <button onclick="joinRoom()">Join Room</button>
+                    <button onclick="leaveRoom()">Leave Room</button>
+                </div>
+                <div id="roomResponse" class="response"></div>
+            </div>
+
+            <!-- Messages Section -->
+            <div class="section">
+                <h3>💬 Messages</h3>
+                <div class="controls">
+                    <input type="text" id="messageContent" placeholder="Message" value="Hello World!">
+                    <input type="number" id="targetRoomId" placeholder="Room ID (optional)">
+                    <input type="number" id="targetUserId" placeholder="User ID (optional)">
+                    <button onclick="sendMessage()">Send Message</button>
+                </div>
+                <div class="controls">
+                    <input type="number" id="getRoomMessages" placeholder="Room ID" value="1">
+                    <button onclick="getRoomMessages()">Get Room Messages</button>
+                </div>
+                <div class="controls">
+                    <input type="number" id="getPrivateUserId" placeholder="Other User ID" value="2">
+                    <button onclick="getPrivateMessages()">Get Private Messages</button>
+                </div>
+                <div id="messageResponse" class="response"></div>
             </div>
         </div>
 
-        <div class="chat-mode" id="privateMode" style="display: none;">
-            <h3>Private Chat Mode</h3>
+        <!-- Users Section -->
+        <div class="section">
+            <h3>👤 Users</h3>
             <div class="controls">
-                <input type="number" id="receiverIdInput" placeholder="Receiver User ID" value="2" min="1">
+                <button onclick="getUsers()">Get All Users</button>
+                <input type="number" id="getUserId" placeholder="User ID" value="1">
+                <button onclick="getUser()">Get User</button>
             </div>
+            <div id="userResponse" class="response"></div>
         </div>
-        
-        <div id="messages"></div>
-        
-        <div class="controls">
-            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)" disabled>
-            <button onclick="sendMessage()" id="sendBtn" disabled>Send</button>
-        </div>
-        
-        <div class="controls">
-            <button onclick="startTyping()" id="typingBtn" disabled>Start Typing</button>
-            <button onclick="stopTyping()" id="stopTypingBtn" disabled>Stop Typing</button>
+
+        <!-- Real-time Messages -->
+        <div class="section">
+            <h3>📡 Real-time Messages</h3>
+            <div id="messages"></div>
+            <div class="controls">
+                <input type="number" id="connectUserId" placeholder="Your User ID" value="1">
+                <button onclick="connectSignalR()">Connect SignalR</button>
+                <button onclick="disconnectSignalR()">Disconnect</button>
+            </div>
+            <div class="controls">
+                <input type="text" id="realtimeMessage" placeholder="Message">
+                <input type="number" id="realtimeRoomId" placeholder="Room ID (optional)">
+                <input type="number" id="realtimeReceiverId" placeholder="Receiver ID (optional)">
+                <input type="number" id="realtimeFileId" placeholder="File ID (optional)">
+                <button onclick="sendRealtimeMessage()">Send Real-time Message</button>
+            </div>
         </div>
     </div>
 
+<script src="https://unpkg.com/@microsoft/signalr@latest/dist/browser/signalr.js"></script>
     <script>
-        let connection = null;
-        let userId = null;
-        let currentMode = 'group'; // 'group' or 'private'
-        let isConnected = false;
-        let isInRoom = false;
+        const API_BASE = 'http://localhost:5138/api';
+        let authToken = '';
 
-        function switchToGroupMode() {
-            currentMode = 'group';
-            document.getElementById('groupMode').style.display = 'block';
-            document.getElementById('privateMode').style.display = 'none';
-            document.getElementById('groupModeBtn').style.background = '#4caf50';
-            document.getElementById('privateModeBtn').style.background = '#2196f3';
-            clearMessages();
+        // Helper functions
+        function showResponse(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            element.className = isError ? 'response error' : 'response success';
         }
 
-        function switchToPrivateMode() {
-            currentMode = 'private';
-            document.getElementById('groupMode').style.display = 'none';
-            document.getElementById('privateMode').style.display = 'block';
-            document.getElementById('privateModeBtn').style.background = '#4caf50';
-            document.getElementById('groupModeBtn').style.background = '#2196f3';
-            clearMessages();
+        function getHeaders() {
+            const headers = { 'Content-Type': 'application/json' };
+            if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+            return headers;
         }
 
-        async function connect() {
-            userId = document.getElementById('userIdInput').value;
-            
-            if (!userId) {
-                alert('user id gir');
-                return;
-            }
-            
-            connection = new signalR.HubConnectionBuilder()
-                .withUrl("/chathub")
-                .build();
-
-            // grup mesajı geldiğinde
-            connection.on("ReceiveMessage", function (messageData) {
-                if (currentMode === 'group') {
-                    addMessage(`${messageData.sender.username}: ${messageData.content}`, 'message', messageData.sentAt);
-                }
-            });
-
-            // private mesaj geldiğinde
-            connection.on("ReceivePrivateMessage", function (messageData) {
-                if (currentMode === 'private') {
-                    const isMyMessage = messageData.sender.id == userId;
-                    const prefix = isMyMessage ? 'You' : messageData.sender.username;
-                    addMessage(`${prefix}: ${messageData.content}`, 'private-message', messageData.sentAt);
-                }
-            });
-
-            // kullanıcı online oldu
-            connection.on("UserOnline", function (onlineUserId) {
-                addSystemMessage(`User ${onlineUserId} is now online`);
-            });
-
-            // kullanıcı offline oldu
-            connection.on("UserOffline", function (offlineUserId) {
-                addSystemMessage(`User ${offlineUserId} went offline`);
-            });
-
-            // kullanıcı yazıyor
-            connection.on("UserTyping", function (username) {
-                addSystemMessage(`${username} is typing...`);
-                setTimeout(() => {
-                    removeTypingMessage(username);
-                }, 3000);
-            });
-
-            // kullanıcı yazmayı bıraktı
-            connection.on("UserStoppedTyping", function (username) {
-                removeTypingMessage(username);
-            });
-
-            // hata mesajları
-            connection.on("Error", function (errorMessage) {
-                addSystemMessage(`Error: ${errorMessage}`);
-            });
-
+        async function apiCall(url, method = 'GET', body = null) {
             try {
-                await connection.start();
-                addSystemMessage("Connected to SignalR hub!");
+                const options = { method, headers: getHeaders() };
+                if (body) options.body = JSON.stringify(body);
                 
-                // bağlandıktan sonra chat'e join ol
-                await connection.invoke("JoinChat", userId);
+                const response = await fetch(`${API_BASE}${url}`, options);
+                const data = await response.json();
                 
-                isConnected = true;
-                updateButtonStates();
-                
-            } catch (err) {
-                addSystemMessage("Connection failed: " + err.toString());
+                if (!response.ok) throw data;
+                return data;
+            } catch (error) {
+                throw error;
             }
         }
 
-        async function disconnect() {
-            if (connection) {
-                await connection.stop();
-                addSystemMessage("Disconnected from SignalR hub");
-                isConnected = false;
-                isInRoom = false;
-                updateButtonStates();
+        // Auth functions
+        async function register() {
+            try {
+                const data = await apiCall('/user/register', 'POST', {
+                    username: document.getElementById('regUsername').value,
+                    email: document.getElementById('regEmail').value,
+                    password: document.getElementById('regPassword').value
+                });
+                authToken = data.token;
+                showResponse('authResponse', data);
+            } catch (error) {
+                showResponse('authResponse', error, true);
+            }
+        }
+
+        async function login() {
+            try {
+                const data = await apiCall('/user/login', 'POST', {
+                    email: document.getElementById('loginEmail').value,
+                    password: document.getElementById('loginPassword').value
+                });
+                authToken = data.token;
+                showResponse('authResponse', data);
+            } catch (error) {
+                showResponse('authResponse', error, true);
+            }
+        }
+
+        async function logout() {
+            try {
+                await apiCall('/user/logout', 'POST');
+                authToken = '';
+                showResponse('authResponse', { message: 'Logged out successfully' });
+            } catch (error) {
+                showResponse('authResponse', error, true);
+            }
+        }
+
+        async function getProfile() {
+            try {
+                const data = await apiCall('/user/profile');
+                showResponse('authResponse', data);
+            } catch (error) {
+                showResponse('authResponse', error, true);
+            }
+        }
+
+        // Friend functions
+        async function sendFriendRequest() {
+            try {
+                const data = await apiCall('/friend/send-request', 'POST', {
+                    usernameOrEmail: document.getElementById('friendUsername').value
+                });
+                showResponse('friendResponse', data);
+            } catch (error) {
+                showResponse('friendResponse', error, true);
+            }
+        }
+
+        async function getFriends() {
+            try {
+                const data = await apiCall('/friend/list');
+                showResponse('friendResponse', data);
+            } catch (error) {
+                showResponse('friendResponse', error, true);
+            }
+        }
+
+        async function getReceivedRequests() {
+            try {
+                const data = await apiCall('/friend/requests/received');
+                showResponse('friendResponse', data);
+            } catch (error) {
+                showResponse('friendResponse', error, true);
+            }
+        }
+
+        async function getSentRequests() {
+            try {
+                const data = await apiCall('/friend/requests/sent');
+                showResponse('friendResponse', data);
+            } catch (error) {
+                showResponse('friendResponse', error, true);
+            }
+        }
+
+        async function respondToRequest() {
+            try {
+                const data = await apiCall('/friend/respond', 'POST', {
+                    requestId: parseInt(document.getElementById('requestId').value),
+                    response: parseInt(document.getElementById('responseType').value)
+                });
+                showResponse('friendResponse', data);
+            } catch (error) {
+                showResponse('friendResponse', error, true);
+            }
+        }
+
+        async function removeFriend() {
+            try {
+                const data = await apiCall('/friend/remove', 'DELETE', {
+                    friendId: parseInt(document.getElementById('removeFriendId').value)
+                });
+                showResponse('friendResponse', data);
+            } catch (error) {
+                showResponse('friendResponse', error, true);
+            }
+        }
+
+        // Room functions
+        async function createRoom() {
+            try {
+                const data = await apiCall('/room', 'POST', {
+                    name: document.getElementById('roomName').value,
+                    description: document.getElementById('roomDesc').value
+                });
+                showResponse('roomResponse', data);
+            } catch (error) {
+                showResponse('roomResponse', error, true);
+            }
+        }
+
+        async function getRooms() {
+            try {
+                const data = await apiCall('/room');
+                showResponse('roomResponse', data);
+            } catch (error) {
+                showResponse('roomResponse', error, true);
+            }
+        }
+
+        async function getMyRooms() {
+            try {
+                const data = await apiCall('/room/my');
+                showResponse('roomResponse', data);
+            } catch (error) {
+                showResponse('roomResponse', error, true);
             }
         }
 
         async function joinRoom() {
-            const roomId = document.getElementById('roomIdInput').value;
-            if (connection && roomId && isConnected) {
-                try {
-                    await connection.invoke("JoinRoom", roomId);
-                    addSystemMessage(`Joined room ${roomId}`);
-                    isInRoom = true;
-                    updateButtonStates();
-                } catch (err) {
-                    addSystemMessage("Join room failed: " + err.toString());
-                }
+            try {
+                const roomId = document.getElementById('roomIdJoin').value;
+                const data = await apiCall(`/room/${roomId}/join`, 'POST');
+                showResponse('roomResponse', data);
+            } catch (error) {
+                showResponse('roomResponse', error, true);
             }
         }
 
         async function leaveRoom() {
-            const roomId = document.getElementById('roomIdInput').value;
-            if (connection && roomId && isInRoom) {
-                try {
-                    await connection.invoke("LeaveRoom", roomId);
-                    addSystemMessage(`Left room ${roomId}`);
-                    isInRoom = false;
-                    updateButtonStates();
-                } catch (err) {
-                    addSystemMessage("Leave room failed: " + err.toString());
-                }
+            try {
+                const roomId = document.getElementById('roomIdJoin').value;
+                const data = await apiCall(`/room/${roomId}/leave`, 'POST');
+                showResponse('roomResponse', data);
+            } catch (error) {
+                showResponse('roomResponse', error, true);
             }
         }
 
+        // Message functions
         async function sendMessage() {
-            const messageInput = document.getElementById("messageInput");
-            const message = messageInput.value.trim();
-            
-            if (!connection || !message || !userId) return;
-
             try {
-                if (currentMode === 'group') {
-                    const roomId = document.getElementById('roomIdInput').value;
-                    if (!roomId || !isInRoom) {
-                        addSystemMessage("önce bir odaya katıl");
-                        return;
-                    }
-                    await connection.invoke("SendMessage", message, parseInt(userId), parseInt(roomId), null);
-                } else {
-                    const receiverId = document.getElementById('receiverIdInput').value;
-                    if (!receiverId) {
-                        addSystemMessage("alıcı id'si gir");
-                        return;
-                    }
-                    await connection.invoke("SendMessage", message, parseInt(userId), null, parseInt(receiverId));
+                const roomId = document.getElementById('targetRoomId').value;
+                const userId = document.getElementById('targetUserId').value;
+                
+                const body = {
+                    content: document.getElementById('messageContent').value,
+                    // senderId JWT'den gelecek, göndermiyoruz
+                    roomId: roomId ? parseInt(roomId) : null,
+                    receiverId: userId ? parseInt(userId) : null,
+                    type: 0 // MessageType.Text
+                };
+                
+                const data = await apiCall('/message', 'POST', body);
+                showResponse('messageResponse', data);
+            } catch (error) {
+                showResponse('messageResponse', error, true);
+            }
+        }
+
+        async function getRoomMessages() {
+            try {
+                const roomId = document.getElementById('getRoomMessages').value;
+                const data = await apiCall(`/message/room/${roomId}`);
+                showResponse('messageResponse', data);
+            } catch (error) {
+                showResponse('messageResponse', error, true);
+            }
+        }
+
+        async function getPrivateMessages() {
+            try {
+                const otherUserId = document.getElementById('getPrivateUserId').value;
+                const data = await apiCall(`/message/private/${otherUserId}`);
+                showResponse('messageResponse', data);
+            } catch (error) {
+                showResponse('messageResponse', error, true);
+            }
+        }
+
+        // User functions
+        async function getUsers() {
+            try {
+                const data = await apiCall('/user');
+                showResponse('userResponse', data);
+            } catch (error) {
+                showResponse('userResponse', error, true);
+            }
+        }
+
+        async function getUser() {
+            try {
+                const userId = document.getElementById('getUserId').value;
+                const data = await apiCall(`/user/${userId}`);
+                showResponse('userResponse', data);
+            } catch (error) {
+                showResponse('userResponse', error, true);
+            }
+        }
+
+        // File upload functions
+        async function uploadFile() {
+            try {
+                const fileInput = document.getElementById('fileInput');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    showResponse('fileResponse', { error: 'Dosya seçin' }, true);
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch(`${API_BASE}/file/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) throw data;
+                
+                // File ID'yi otomatik doldur
+                document.getElementById('fileAttachmentId').value = data.id;
+                showResponse('fileResponse', data);
+            } catch (error) {
+                showResponse('fileResponse', error, true);
+            }
+        }
+
+        async function sendFileMessage() {
+            try {
+                const roomId = document.getElementById('targetRoomId').value;
+                const userId = document.getElementById('targetUserId').value;
+                const fileId = document.getElementById('fileAttachmentId').value;
+                const caption = document.getElementById('fileCaption').value;
+                const messageType = document.getElementById('messageType').value;
+                
+                if (!fileId) {
+                    showResponse('fileResponse', { error: 'Önce dosya yükleyin' }, true);
+                    return;
                 }
                 
-                messageInput.value = "";
-            } catch (err) {
-                addSystemMessage("Send failed: " + err.toString());
+                const body = {
+                    content: caption || '',
+                    roomId: roomId ? parseInt(roomId) : null,
+                    receiverId: userId ? parseInt(userId) : null,
+                    type: parseInt(messageType),
+                    fileAttachmentId: parseInt(fileId)
+                };
+                
+                const data = await apiCall('/message', 'POST', body);
+                showResponse('fileResponse', data);
+            } catch (error) {
+                showResponse('fileResponse', error, true);
+            }
+        }
+        let connection = null;
+
+        async function connectSignalR() {
+            try {
+                if (connection && connection.state === signalR.HubConnectionState.Connected) {
+                    addMessage('Already connected to SignalR');
+                    return;
+                }
+
+                const userId = document.getElementById('connectUserId').value;
+                if (!userId) {
+                    addMessage('Please enter User ID', true);
+                    return;
+                }
+
+                // Create connection
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl(`http://localhost:5138/chatHub?userId=${userId}`, {
+                        accessTokenFactory: () => authToken
+                    })
+                    .build();
+
+                // Set up event handlers
+                connection.on("ReceiveMessage", function (message) {
+                    addMessage(`Message from ${message.senderName}: ${message.content}`);
+                });
+
+                connection.on("UserJoinedRoom", function (message) {
+                    addMessage(`${message.userName} joined room ${message.roomName}`, false, 'info');
+                });
+
+                connection.on("UserLeftRoom", function (message) {
+                    addMessage(`${message.userName} left room ${message.roomName}`, false, 'info');
+                });
+
+                // Start connection
+                await connection.start();
+                addMessage('Connected to SignalR successfully!', false, 'success');
+                
+                // Update button states
+                document.querySelector('button[onclick="connectSignalR()"]').disabled = true;
+                document.querySelector('button[onclick="disconnectSignalR()"]').disabled = false;
+
+            } catch (error) {
+                console.error('SignalR connection failed:', error);
+                addMessage(`Connection failed: ${error.message}`, true);
             }
         }
 
-        async function startTyping() {
-            if (connection && currentMode === 'group' && isInRoom) {
-                const roomId = document.getElementById('roomIdInput').value;
-                const username = `User${userId}`;
-                await connection.invoke("UserTyping", parseInt(roomId), username);
+        async function disconnectSignalR() {
+            try {
+                if (connection) {
+                    await connection.stop();
+                    connection = null;
+                    addMessage('Disconnected from SignalR', false, 'info');
+                    
+                    // Update button states
+                    document.querySelector('button[onclick="connectSignalR()"]').disabled = false;
+                    document.querySelector('button[onclick="disconnectSignalR()"]').disabled = true;
+                }
+            } catch (error) {
+                console.error('SignalR disconnect failed:', error);
+                addMessage(`Disconnect failed: ${error.message}`, true);
             }
         }
 
-        async function stopTyping() {
-            if (connection && currentMode === 'group' && isInRoom) {
-                const roomId = document.getElementById('roomIdInput').value;
-                const username = `User${userId}`;
-                await connection.invoke("UserStoppedTyping", parseInt(roomId), username);
+        async function sendRealtimeMessage() {
+            try {
+                if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+                    addMessage('Not connected to SignalR', true);
+                    return;
+                }
+
+                const content = document.getElementById('realtimeMessage').value;
+                const roomId = document.getElementById('realtimeRoomId').value;
+                const receiverId = document.getElementById('realtimeReceiverId').value;
+                const fileId = document.getElementById('realtimeFileId').value;
+
+                if (!content.trim()) {
+                    addMessage('Please enter a message', true);
+                    return;
+                }
+
+                const messageData = {
+                    content: content.trim(),
+                    roomId: roomId ? parseInt(roomId) : null,
+                    receiverId: receiverId ? parseInt(receiverId) : null,
+                    fileAttachmentId: fileId ? parseInt(fileId) : null,
+                    type: 0 // Text message
+                };
+
+                await connection.invoke("SendMessage", messageData);
+                
+                // Clear input
+                document.getElementById('realtimeMessage').value = '';
+                addMessage(`Message sent: ${content}`, false, 'success');
+
+            } catch (error) {
+                console.error('Send message failed:', error);
+                addMessage(`Send failed: ${error.message}`, true);
             }
         }
 
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        }
-
-        function addMessage(message, className = 'message', timestamp = null) {
-            const messages = document.getElementById("messages");
-            const div = document.createElement("div");
-            div.className = className;
+        function addMessage(message, isError = false, type = null) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.style.padding = '5px';
+            messageElement.style.margin = '2px 0';
+            messageElement.style.borderRadius = '4px';
             
-            const time = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
-            div.innerHTML = `${message} <small style="color: #666;">(${time})</small>`;
+            if (isError) {
+                messageElement.style.backgroundColor = '#ffebee';
+                messageElement.style.color = '#c62828';
+                messageElement.style.border = '1px solid #ef5350';
+            } else if (type === 'success') {
+                messageElement.style.backgroundColor = '#e8f5e8';
+                messageElement.style.color = '#2e7d32';
+                messageElement.style.border = '1px solid #4caf50';
+            } else if (type === 'info') {
+                messageElement.style.backgroundColor = '#e3f2fd';
+                messageElement.style.color = '#1565c0';
+                messageElement.style.border = '1px solid #2196f3';
+            } else {
+                messageElement.style.backgroundColor = '#f5f5f5';
+                messageElement.style.border = '1px solid #ddd';
+            }
             
-            messages.appendChild(div);
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        function addSystemMessage(message) {
-            addMessage(`📢 ${message}`, 'system-message');
-        }
-
-        function removeTypingMessage(username) {
-            // bu daha complex olur, şimdilik basit tutalım
-        }
-
-        function clearMessages() {
-            document.getElementById("messages").innerHTML = "";
-        }
-
-        function updateButtonStates() {
-            document.getElementById('connectBtn').disabled = isConnected;
-            document.getElementById('disconnectBtn').disabled = !isConnected;
-            document.getElementById('joinRoomBtn').disabled = !isConnected || isInRoom;
-            document.getElementById('leaveRoomBtn').disabled = !isConnected || !isInRoom;
-            document.getElementById('messageInput').disabled = !isConnected || (currentMode === 'group' && !isInRoom);
-            document.getElementById('sendBtn').disabled = !isConnected || (currentMode === 'group' && !isInRoom);
-            document.getElementById('typingBtn').disabled = !isConnected || currentMode !== 'group' || !isInRoom;
-            document.getElementById('stopTypingBtn').disabled = !isConnected || currentMode !== 'group' || !isInRoom;
-        }
-
-        // sayfa yüklendiğinde
-        window.onload = function() {
-            switchToGroupMode();
-            updateButtonStates();
-        };
+            messageElement.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
     </script>
 </body>
 </html>
