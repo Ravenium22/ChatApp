@@ -1,6 +1,8 @@
 using Backend.Data;
 using Backend.Models;
 using Backend.DTOs;
+using Backend.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -10,11 +12,13 @@ namespace Backend.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<NotificationService> _logger;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public NotificationService(ApplicationDbContext context, ILogger<NotificationService> logger)
+        public NotificationService(ApplicationDbContext context, ILogger<NotificationService> logger, IHubContext<ChatHub> hubContext)
         {
             _context = context;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         public async Task<Notification> CreateNotificationAsync(CreateNotificationDto dto)
@@ -35,6 +39,9 @@ namespace Backend.Services
 
             _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();
+
+            // 🔥 REAL-TIME NOTIFICATION GÖNDER
+            await SendRealtimeNotification(dto.UserId, notification);
 
             return notification;
         }
@@ -91,6 +98,26 @@ namespace Backend.Services
         {
             return await _context.Notifications
                 .CountAsync(n => n.UserId == userId && !n.IsRead);
+        }
+
+        // 🔥 REAL-TIME NOTIFICATION SENDER
+        private async Task SendRealtimeNotification(int userId, Notification notification)
+        {
+            var connectionId = ChatHub.GetUserConnectionId(userId.ToString());
+            if (!string.IsNullOrEmpty(connectionId))
+            {
+                await _hubContext.Clients.Client(connectionId)
+                    .SendAsync("ReceiveNotification", new
+                    {
+                        notification.Id,
+                        notification.Title,
+                        notification.Message,
+                        notification.Type,
+                        notification.CreatedAt,
+                        TypeDisplayName = GetTypeDisplayName(notification.Type),
+                        Icon = GetTypeIcon(notification.Type)
+                    });
+            }
         }
 
         // Specific notification creators

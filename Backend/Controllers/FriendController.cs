@@ -13,13 +13,15 @@ namespace Backend.Controllers
     [Authorize]
     public class FriendController : ControllerBase
     {
+        private readonly NotificationService _notificationService;
         private readonly ApplicationDbContext _context;
         private readonly JwtService _jwtService;
 
-        public FriendController(ApplicationDbContext context, JwtService jwtService)
+        public FriendController(ApplicationDbContext context, JwtService jwtService, NotificationService notificationService)
         {
             _context = context;
             _jwtService = jwtService;
+            _notificationService = notificationService;
         }
 
         // POST: api/friend/send-request - arkadaş isteği gönder
@@ -69,6 +71,7 @@ namespace Backend.Controllers
 
             _context.FriendRequests.Add(friendRequest);
             await _context.SaveChangesAsync();
+
 
             return Ok(new { message = "Arkadaş isteği gönderildi" });
         }
@@ -154,60 +157,76 @@ namespace Backend.Controllers
         }
 
         // POST: api/friend/respond - arkadaş isteğini yanıtla
-        [HttpPost("respond")]
-        public async Task<ActionResult> RespondToFriendRequest([FromBody] RespondFriendRequestDto request)
+        // POST: api/friend/respond - arkadaş isteğini yanıtla
+[HttpPost("respond")]
+public async Task<ActionResult> RespondToFriendRequest([FromBody] RespondFriendRequestDto request)
+{
+    var userId = _jwtService.GetUserIdFromToken(HttpContext.User);
+    if (!userId.HasValue)
+        return Unauthorized();
+
+    var friendRequest = await _context.FriendRequests
+        .Include(fr => fr.Sender) // BUNU EKLE
+        .FirstOrDefaultAsync(fr => fr.Id == request.RequestId && 
+                                  fr.ReceiverId == userId.Value &&
+                                  fr.Status == FriendRequestStatus.Pending);
+
+    if (friendRequest == null)
+        return NotFound("Arkadaş isteği bulunamadı");
+
+    if (request.Response != FriendRequestStatus.Accepted && 
+        request.Response != FriendRequestStatus.Rejected)
+        return BadRequest("Geçersiz yanıt");
+
+    // İsteği güncelle
+    friendRequest.Status = request.Response;
+    friendRequest.RespondedAt = DateTime.UtcNow;
+
+    // Eğer kabul edildiyse, arkadaşlık oluştur
+    if (request.Response == FriendRequestStatus.Accepted)
+    {
+        // İki yönlü arkadaşlık oluştur
+        var friendship1 = new Friendship
         {
-            var userId = _jwtService.GetUserIdFromToken(HttpContext.User);
-            if (!userId.HasValue)
-                return Unauthorized();
+            UserId = friendRequest.SenderId,
+            FriendId = friendRequest.ReceiverId,
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
+        };
 
-            var friendRequest = await _context.FriendRequests
-                .FirstOrDefaultAsync(fr => fr.Id == request.RequestId && 
-                                          fr.ReceiverId == userId.Value &&
-                                          fr.Status == FriendRequestStatus.Pending);
+        var friendship2 = new Friendship
+        {
+            UserId = friendRequest.ReceiverId,
+            FriendId = friendRequest.SenderId,
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
+        };
 
-            if (friendRequest == null)
-                return NotFound("Arkadaş isteği bulunamadı");
+        _context.Friendships.AddRange(friendship1, friendship2);
+    }
 
-            if (request.Response != FriendRequestStatus.Accepted && 
-                request.Response != FriendRequestStatus.Rejected)
-                return BadRequest("Geçersiz yanıt");
+    await _context.SaveChangesAsync();
 
-            // İsteği güncelle
-            friendRequest.Status = request.Response;
-            friendRequest.RespondedAt = DateTime.UtcNow;
-
-            // Eğer kabul edildiyse, arkadaşlık oluştur
-            if (request.Response == FriendRequestStatus.Accepted)
-            {
-                // İki yönlü arkadaşlık oluştur
-                var friendship1 = new Friendship
-                {
-                    UserId = friendRequest.SenderId,
-                    FriendId = friendRequest.ReceiverId,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
-
-                var friendship2 = new Friendship
-                {
-                    UserId = friendRequest.ReceiverId,
-                    FriendId = friendRequest.SenderId,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
-
-                _context.Friendships.AddRange(friendship1, friendship2);
-            }
-
-            await _context.SaveChangesAsync();
-
-            var message = request.Response == FriendRequestStatus.Accepted 
-                ? "Arkadaş isteği kabul edildi" 
-                : "Arkadaş isteği reddedildi";
-
-            return Ok(new { message });
+    // 🔥 NOTIFICATION OLUŞTUR (SADECE KABUL EDİLDİĞİNDE)
+    if (request.Response == FriendRequestStatus.Accepted)
+    {
+        var accepter = await _context.Users.FindAsync(userId.Value);
+        if (accepter != null)
+        {
+            await _notificationService.CreateFriendRequestAcceptedNotificationAsync(
+                friendRequest.SenderId, // İsteği gönderen kişiye bildirim
+                userId.Value,           // Kabul eden kişi
+                accepter.Username       // Kabul eden kişinin adı
+            );
         }
+    }
+
+    var message = request.Response == FriendRequestStatus.Accepted 
+        ? "Arkadaş isteği kabul edildi" 
+        : "Arkadaş isteği reddedildi";
+
+    return Ok(new { message });
+}
 
         // GET: api/friend/list - arkadaş listesi
         [HttpGet("list")]

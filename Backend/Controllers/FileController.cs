@@ -4,6 +4,9 @@ using Backend.Data;
 using Backend.Models;
 using Backend.DTOs;
 using Backend.Services;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Jpeg;
 
 namespace Backend.Controllers
 {
@@ -81,7 +84,7 @@ namespace Backend.Controllers
                 string? thumbnailPath = null;
                 if (fileType == FileType.Image)
                 {
-                    thumbnailPath = await CreateThumbnail(filePath, uniqueFileName);
+                    thumbnailPath = await CreateThumbnail(filePath, uniqueFileName, file.ContentType);
                 }
 
                 // Database'e kaydet
@@ -190,28 +193,47 @@ namespace Backend.Controllers
             };
         }
 
-        private async Task<string?> CreateThumbnail(string originalPath, string fileName)
+        private async Task<string?> CreateThumbnail(string originalPath, string fileName, string contentType)
         {
+            // Sadece resim dosyaları için thumbnail oluştur
+            var supportedFormats = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+            if (!supportedFormats.Contains(contentType.ToLower()))
+                return null;
+
             try
             {
-                // Basit thumbnail implementation
-                // Gerçek uygulamada ImageSharp veya benzeri kullanılmalı
                 var thumbnailFolder = Path.Combine(_environment.WebRootPath, "uploads", "thumbnails");
                 if (!Directory.Exists(thumbnailFolder))
                     Directory.CreateDirectory(thumbnailFolder);
 
-                var thumbnailFileName = $"thumb_{fileName}";
+                var thumbnailFileName = $"thumb_{Path.GetFileNameWithoutExtension(fileName)}.jpg";
                 var thumbnailPath = Path.Combine(thumbnailFolder, thumbnailFileName);
 
-                // Şimdilik orijinal dosyayı kopyala (gerçek thumbnail yerine)
-                // TODO: Gerçek thumbnail oluşturma logic'i eklenecek
-                System.IO.File.Copy(originalPath, thumbnailPath, true);
-
+                using var image = await Image.LoadAsync(originalPath);
+                
+                // Thumbnail oluştur
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new Size(200, 200),
+                    Mode = ResizeMode.Crop,
+                    Position = AnchorPositionMode.Center
+                }));
+                
+                // JPEG encoder ayarları
+                var encoder = new JpegEncoder()
+                {
+                    Quality = 80
+                };
+                
+                await image.SaveAsync(thumbnailPath, encoder);
+                
                 return Path.Combine("uploads", "thumbnails", thumbnailFileName);
             }
-            catch
+            catch (Exception ex)
             {
-                return null; // Thumbnail oluşturamazsa null döndür
+                // Log error
+                Console.WriteLine($"Thumbnail creation failed for {fileName}: {ex.Message}");
+                return null;
             }
         }
     }

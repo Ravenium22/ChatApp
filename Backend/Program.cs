@@ -50,7 +50,6 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
     
-    // SignalR için token'ı query string'den al
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -60,6 +59,14 @@ builder.Services.AddAuthentication(options =>
             if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chathub"))
             {
                 context.Token = accessToken;
+            }
+            else if (string.IsNullOrEmpty(context.Token))
+            {
+                var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                {
+                    context.Token = authHeader.Substring("Bearer ".Length).Trim();
+                }
             }
             return Task.CompletedTask;
         }
@@ -76,9 +83,10 @@ builder.Services.AddCors(options =>
         builder =>
         {
             builder
-                .AllowAnyOrigin()
+                .WithOrigins("http://localhost:5138") // Add your frontend URL
                 .AllowAnyMethod()
-                .AllowAnyHeader();
+                .AllowAnyHeader()
+                .AllowCredentials(); // Important for SignalR
         });
 });
 

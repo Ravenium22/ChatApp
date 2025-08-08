@@ -1,131 +1,666 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chat App - Test Panel</title>
+    <title>Chat App - Enhanced Test Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .section { background: white; margin: 10px 0; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
-        .section h3 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
-        input, button, select { padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-        .response { background: #f8f9fa; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; }
-        .error { border-left-color: #dc3545; }
-        .success { border-left-color: #28a745; }
-        .controls { margin: 10px 0; }
-        #messages { height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f9f9f9; }
+        :root {
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --border-color: #dee2e6;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --border-radius: 8px;
+            --transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #ffffff;
+            --border-color: #333;
+            --shadow: 0 2px 10px rgba(255,255,255,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .top-bar h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .theme-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+        }
+
+        .connection-status.disconnected {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--error-color);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .section { 
+            background: var(--card-bg); 
+            padding: 20px; 
+            border-radius: var(--border-radius); 
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        .section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .section h3 { 
+            margin: 0 0 20px 0; 
+            color: var(--text-color); 
+            border-bottom: 2px solid var(--primary-color); 
+            padding-bottom: 10px; 
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls { 
+            margin: 15px 0; 
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .input-group label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        input, button, select, textarea { 
+            padding: 12px 16px; 
+            border: 2px solid var(--border-color); 
+            border-radius: var(--border-radius); 
+            font-size: 14px;
+            transition: var(--transition);
+            background: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        button { 
+            background: var(--primary-color); 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        button:hover:not(:disabled) { 
+            background: var(--primary-hover); 
+            transform: translateY(-1px);
+        }
+
+        button:disabled { 
+            background: #6c757d; 
+            cursor: not-allowed; 
+            opacity: 0.6;
+            transform: none;
+        }
+
+        .btn-success { background: var(--success-color); }
+        .btn-success:hover:not(:disabled) { background: #218838; }
+        
+        .btn-danger { background: var(--error-color); }
+        .btn-danger:hover:not(:disabled) { background: #c82333; }
+        
+        .btn-warning { background: var(--warning-color); color: #212529; }
+        .btn-warning:hover:not(:disabled) { background: #e0a800; }
+
+        .response { 
+            background: var(--bg-color); 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-left: 4px solid var(--primary-color); 
+            border-radius: var(--border-radius);
+            font-family: 'Courier New', monospace;
+            position: relative;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .response::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary-color);
+        }
+
+        .response.error { 
+            border-left-color: var(--error-color); 
+            background: rgba(220, 53, 69, 0.05);
+        }
+
+        .response.error::before { background: var(--error-color); }
+
+        .response.success { 
+            border-left-color: var(--success-color); 
+            background: rgba(40, 167, 69, 0.05);
+        }
+
+        .response.success::before { background: var(--success-color); }
+
+        #messages { 
+            height: 300px; 
+            overflow-y: auto; 
+            border: 2px solid var(--border-color); 
+            padding: 15px; 
+            background: var(--bg-color); 
+            border-radius: var(--border-radius);
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .message-input-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .message-input-container input {
+            flex: 1;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success { background: var(--success-color); }
+        .notification.error { background: var(--error-color); }
+        .notification.info { background: var(--info-color); }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            background: var(--bg-color);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .collapsible::after {
+            content: '\f107';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            float: right;
+            transition: transform 0.3s ease;
+        }
+
+        .collapsible.collapsed::after {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .collapsible-content.collapsed {
+            max-height: 0;
+        }
+
+        @media (max-width: 768px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .input-group {
+                min-width: auto;
+            }
+            
+            .top-bar {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🚀 Chat App Test Panel</h1>
-        
-        <!-- Auth Section -->
-        <div class="section">
-            <h3>🔐 Authentication</h3>
-            <div class="controls">
-                <input type="text" id="regUsername" placeholder="Username" value="testuser1">
-                <input type="email" id="regEmail" placeholder="Email" value="test1@test.com">
-                <input type="password" id="regPassword" placeholder="Password" value="123456">
-                <button onclick="register()">Register</button>
+<body>
+    <div class="top-bar">
+        <h1><i class="fas fa-comments"></i> Chat App - Enhanced Test Panel</h1>
+        <div class="theme-controls">
+            <div id="connectionStatus" class="connection-status disconnected">
+                <i class="fas fa-circle"></i>
+                <span>Disconnected</span>
             </div>
-            <div class="controls">
-                <input type="email" id="loginEmail" placeholder="Email" value="test1@test.com">
-                <input type="password" id="loginPassword" placeholder="Password" value="123456">
-                <button onclick="login()">Login</button>
-                <button onclick="logout()">Logout</button>
-                <button onclick="getProfile()">Get Profile</button>
-            </div>
-            <div id="authResponse" class="response"></div>
+            <button class="theme-toggle" onclick="toggleTheme()">
+                <i class="fas fa-moon"></i> Toggle Theme
+            </button>
         </div>
+    </div>
+
+    <div class="container">
+        <!-- Statistics Dashboard -->
+        <div class="section">
+            <h3 class="collapsible" onclick="toggleCollapse(this)">
+                <i class="fas fa-chart-line"></i> Dashboard & Statistics
+            </h3>
+            <div class="collapsible-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statMessages">0</div>
+                        <div class="stat-label">Messages Sent</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statFiles">0</div>
+                        <div class="stat-label">Files Uploaded</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statFriends">0</div>
+                        <div class="stat-label">Friends</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statRooms">0</div>
+                        <div class="stat-label">Rooms Joined</div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button onclick="refreshStats()">
+                        <i class="fas fa-sync-alt"></i> Refresh Stats
+                    </button>
+                    <button onclick="clearAllData()" class="btn-warning">
+                        <i class="fas fa-trash"></i> Clear All Data
+                    </button>
+                    <button onclick="exportLogs()" class="btn-success">
+                        <i class="fas fa-download"></i> Export Logs
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <!-- Auth Section -->
+            <div class="section">
+                <h3 class="collapsible" onclick="toggleCollapse(this)">
+                    <i class="fas fa-lock"></i> Authentication
+                </h3>
+                <div class="collapsible-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label>Username</label>
+                            <input type="text" id="regUsername" placeholder="Enter username" value="testuser1">
+                        </div>
+                        <div class="input-group">
+                            <label>Email</label>
+                            <input type="email" id="regEmail" placeholder="Enter email" value="test1@test.com">
+                        </div>
+                        <div class="input-group">
+                            <label>Password</label>
+                            <input type="password" id="regPassword" placeholder="Enter password" value="123456">
+                        </div>
+                        <button onclick="register()" class="btn-success">
+                            <i class="fas fa-user-plus"></i> Register
+                        </button>
+                    </div>
+                    <div class="controls">
+                        <div class="input-group">
+                            <label>Email</label>
+                            <input type="email" id="loginEmail" placeholder="Enter email" value="test1@test.com">
+                        </div>
+                        <div class="input-group">
+                            <label>Password</label>
+                            <input type="password" id="loginPassword" placeholder="Enter password" value="123456">
+                        </div>
+                        <button onclick="login()" class="btn-success">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <button onclick="logout()" class="btn-danger">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                        <button onclick="getProfile()">
+                            <i class="fas fa-user"></i> Profile
+                        </button>
+                    </div>
+                    <div id="authResponse" class="response"></div>
+                </div>
+            </div>
 
             <!-- File Upload Section -->
             <div class="section">
-                <h3>📁 File Upload</h3>
-                <div class="controls">
-                    <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.txt">
-                    <button onclick="uploadFile()">Upload File</button>
+                <h3 class="collapsible" onclick="toggleCollapse(this)">
+                    <i class="fas fa-cloud-upload-alt"></i> File Management
+                </h3>
+                <div class="collapsible-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label>Select File</label>
+                            <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.txt">
+                        </div>
+                        <button onclick="uploadFile()" class="btn-success">
+                            <i class="fas fa-upload"></i> Upload File
+                        </button>
+                    </div>
+                    <div class="controls">
+                        <div class="input-group">
+                            <label>File ID</label>
+                            <input type="number" id="fileAttachmentId" placeholder="Auto-filled after upload">
+                        </div>
+                        <div class="input-group">
+                            <label>Caption</label>
+                            <input type="text" id="fileCaption" placeholder="Optional caption">
+                        </div>
+                        <div class="input-group">
+                            <label>Message Type</label>
+                            <select id="messageType">
+                                <option value="0">Text</option>
+                                <option value="1">Image</option>
+                                <option value="2">File</option>
+                                <option value="3">Audio</option>
+                                <option value="4">Video</option>
+                            </select>
+                        </div>
+                        <button onclick="sendFileMessage()" class="btn-success">
+                            <i class="fas fa-paper-plane"></i> Send File Message
+                        </button>
+                    </div>
+                    <div id="fileResponse" class="response"></div>
                 </div>
-                <div class="controls">
-                    <input type="number" id="fileAttachmentId" placeholder="File ID">
-                    <input type="text" id="fileCaption" placeholder="Caption (optional)">
-                    <select id="messageType">
-                        <option value="0">Text</option>
-                        <option value="1">Image</option>
-                        <option value="2">File</option>
-                        <option value="3">Audio</option>
-                        <option value="4">Video</option>
-                    </select>
-                    <button onclick="sendFileMessage()">Send File Message</button>
-                </div>
-                <div id="fileResponse" class="response"></div>
             </div>
+
             <!-- Friends Section -->
             <div class="section">
-                <h3>👥 Friends</h3>
-                <div class="controls">
-                    <input type="text" id="friendUsername" placeholder="Username/Email" value="testuser2">
-                    <button onclick="sendFriendRequest()">Send Friend Request</button>
+                <h3 class="collapsible" onclick="toggleCollapse(this)">
+                    <i class="fas fa-users"></i> Friend Management
+                </h3>
+                <div class="collapsible-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label>Username/Email</label>
+                            <input type="text" id="friendUsername" placeholder="Enter username or email" value="testuser2">
+                        </div>
+                        <button onclick="sendFriendRequest()" class="btn-success">
+                            <i class="fas fa-user-plus"></i> Send Request
+                        </button>
+                    </div>
+                    <div class="controls">
+                        <button onclick="getFriends()">
+                            <i class="fas fa-list"></i> Get Friends
+                        </button>
+                        <button onclick="getReceivedRequests()">
+                            <i class="fas fa-inbox"></i> Received Requests
+                        </button>
+                        <button onclick="getSentRequests()">
+                            <i class="fas fa-paper-plane"></i> Sent Requests
+                        </button>
+                    </div>
+                    <div class="controls">
+                        <div class="input-group">
+                            <label>Request ID</label>
+                            <input type="number" id="requestId" placeholder="Request ID" min="1">
+                        </div>
+                        <div class="input-group">
+                            <label>Response</label>
+                            <select id="responseType">
+                                <option value="1">Accept</option>
+                                <option value="2">Reject</option>
+                            </select>
+                        </div>
+                        <button onclick="respondToRequest()" class="btn-success">
+                            <i class="fas fa-check"></i> Respond
+                        </button>
+                    </div>
+                    <div class="controls">
+                        <div class="input-group">
+                            <label>Friend ID</label>
+                            <input type="number" id="removeFriendId" placeholder="Friend ID" min="1">
+                        </div>
+                        <button onclick="removeFriend()" class="btn-danger">
+                            <i class="fas fa-user-minus"></i> Remove Friend
+                        </button>
+                    </div>
+                    <div id="friendResponse" class="response"></div>
                 </div>
-                <div class="controls">
-                    <button onclick="getFriends()">Get Friends</button>
-                    <button onclick="getReceivedRequests()">Get Received Requests</button>
-                    <button onclick="getSentRequests()">Get Sent Requests</button>
-                </div>
-                <div class="controls">
-                    <input type="number" id="requestId" placeholder="Request ID" min="1">
-                    <select id="responseType">
-                        <option value="1">Accept</option>
-                        <option value="2">Reject</option>
-                    </select>
-                    <button onclick="respondToRequest()">Respond</button>
-                </div>
-                <div class="controls">
-                    <input type="number" id="removeFriendId" placeholder="Friend ID" min="1">
-                    <button onclick="removeFriend()">Remove Friend</button>
-                </div>
-                <div id="friendResponse" class="response"></div>
             </div>
 
             <!-- Rooms Section -->
             <div class="section">
-                <h3>🏠 Rooms</h3>
+                <h3 class="collapsible" onclick="toggleCollapse(this)">
+                    <i class="fas fa-home"></i> Room Management
+                </h3>
+                <div class="collapsible-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label>Room Name</label>
+                            <input type="text" id="roomName" placeholder="Enter room name" value="Test Room">
+                        </div>
+                        <div class="input-group">
+                            <label>Description</label>
+                            <input type="text" id="roomDesc" placeholder="Enter description" value="Test Description">
+                        </div>
+                        <button onclick="createRoom()" class="btn-success">
+                            <i class="fas fa-plus"></i> Create Room
+                        </button>
+                    </div>
                 <div class="controls">
-                    <input type="text" id="roomName" placeholder="Room Name" value="Test Room">
-                    <input type="text" id="roomDesc" placeholder="Description" value="Test Description">
-                    <button onclick="createRoom()">Create Room</button>
+                    <button onclick="getRooms()">
+                        <i class="fas fa-list"></i> Get All Rooms
+                    </button>
+                    <button onclick="getMyRooms()">
+                        <i class="fas fa-home"></i> My Rooms
+                    </button>
                 </div>
                 <div class="controls">
-                    <button onclick="getRooms()">Get All Rooms</button>
-                    <button onclick="getMyRooms()">Get My Rooms</button>
-                </div>
-                <div class="controls">
-                    <input type="number" id="roomIdJoin" placeholder="Room ID" value="1" min="1">
-                    <button onclick="joinRoom()">Join Room</button>
-                    <button onclick="leaveRoom()">Leave Room</button>
+                    <div class="input-group">
+                        <label>Room ID</label>
+                        <input type="number" id="roomIdJoin" placeholder="Room ID" value="1" min="1">
+                    </div>
+                    <button onclick="joinRoom()" class="btn-success">
+                        <i class="fas fa-sign-in-alt"></i> Join Room
+                    </button>
+                    <button onclick="leaveRoom()" class="btn-danger">
+                        <i class="fas fa-sign-out-alt"></i> Leave Room
+                    </button>
                 </div>
                 <div id="roomResponse" class="response"></div>
             </div>
+        </div>
 
-            <!-- Messages Section -->
-            <div class="section">
-                <h3>💬 Messages</h3>
+        <!-- Messages Section -->
+        <div class="section">
+            <h3 class="collapsible" onclick="toggleCollapse(this)">
+                <i class="fas fa-comments"></i> Message Management
+            </h3>
+            <div class="collapsible-content">
                 <div class="controls">
-                    <input type="text" id="messageContent" placeholder="Message" value="Hello World!">
-                    <input type="number" id="targetRoomId" placeholder="Room ID (optional)">
-                    <input type="number" id="targetUserId" placeholder="User ID (optional)">
-                    <button onclick="sendMessage()">Send Message</button>
+                    <div class="input-group">
+                        <label>Message Content</label>
+                        <textarea id="messageContent" placeholder="Enter your message..." rows="3">Hello World!</textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>Room ID (optional)</label>
+                        <input type="number" id="targetRoomId" placeholder="Room ID">
+                    </div>
+                    <div class="input-group">
+                        <label>User ID (optional)</label>
+                        <input type="number" id="targetUserId" placeholder="User ID">
+                    </div>
+                    <button onclick="sendMessage()" class="btn-success">
+                        <i class="fas fa-paper-plane"></i> Send Message
+                    </button>
                 </div>
                 <div class="controls">
-                    <input type="number" id="getRoomMessages" placeholder="Room ID" value="1">
-                    <button onclick="getRoomMessages()">Get Room Messages</button>
+                    <div class="input-group">
+                        <label>Room ID</label>
+                        <input type="number" id="getRoomMessages" placeholder="Room ID" value="1">
+                    </div>
+                    <button onclick="getRoomMessages()">
+                        <i class="fas fa-comment-dots"></i> Get Room Messages
+                    </button>
                 </div>
                 <div class="controls">
-                    <input type="number" id="getPrivateUserId" placeholder="Other User ID" value="2">
-                    <button onclick="getPrivateMessages()">Get Private Messages</button>
+                    <div class="input-group">
+                        <label>Other User ID</label>
+                        <input type="number" id="getPrivateUserId" placeholder="Other User ID" value="2">
+                    </div>
+                    <button onclick="getPrivateMessages()">
+                        <i class="fas fa-lock"></i> Get Private Messages
+                    </button>
                 </div>
                 <div id="messageResponse" class="response"></div>
             </div>
@@ -133,44 +668,234 @@
 
         <!-- Users Section -->
         <div class="section">
-            <h3>👤 Users</h3>
-            <div class="controls">
-                <button onclick="getUsers()">Get All Users</button>
-                <input type="number" id="getUserId" placeholder="User ID" value="1">
-                <button onclick="getUser()">Get User</button>
+            <h3 class="collapsible" onclick="toggleCollapse(this)">
+                <i class="fas fa-user"></i> User Management
+            </h3>
+            <div class="collapsible-content">
+                <div class="controls">
+                    <button onclick="getUsers()">
+                        <i class="fas fa-users"></i> Get All Users
+                    </button>
+                    <div class="input-group">
+                        <label>User ID</label>
+                        <input type="number" id="getUserId" placeholder="User ID" value="1">
+                    </div>
+                    <button onclick="getUser()">
+                        <i class="fas fa-search"></i> Get User
+                    </button>
+                </div>
+                <div id="userResponse" class="response"></div>
             </div>
-            <div id="userResponse" class="response"></div>
         </div>
 
         <!-- Real-time Messages -->
         <div class="section">
-            <h3>📡 Real-time Messages</h3>
-            <div id="messages"></div>
-            <div class="controls">
-                <input type="number" id="connectUserId" placeholder="Your User ID" value="1">
-                <button onclick="connectSignalR()">Connect SignalR</button>
-                <button onclick="disconnectSignalR()">Disconnect</button>
-            </div>
-            <div class="controls">
-                <input type="text" id="realtimeMessage" placeholder="Message">
-                <input type="number" id="realtimeRoomId" placeholder="Room ID (optional)">
-                <input type="number" id="realtimeReceiverId" placeholder="Receiver ID (optional)">
-                <input type="number" id="realtimeFileId" placeholder="File ID (optional)">
-                <button onclick="sendRealtimeMessage()">Send Real-time Message</button>
+            <h3 class="collapsible" onclick="toggleCollapse(this)">
+                <i class="fas fa-broadcast-tower"></i> Real-time Communication
+            </h3>
+            <div class="collapsible-content">
+                <div id="messages"></div>
+                <div class="controls">
+                    <div class="input-group">
+                        <label>Your User ID</label>
+                        <input type="number" id="connectUserId" placeholder="Your User ID" value="1">
+                    </div>
+                    <button onclick="connectSignalR()" class="btn-success">
+                        <i class="fas fa-plug"></i> Connect SignalR
+                    </button>
+                    <button onclick="disconnectSignalR()" class="btn-danger" disabled>
+                        <i class="fas fa-unlink"></i> Disconnect
+                    </button>
+                    <button onclick="clearMessages()" class="btn-warning">
+                        <i class="fas fa-broom"></i> Clear Messages
+                    </button>
+                </div>
+                <div class="message-input-container">
+                    <input type="text" id="realtimeMessage" placeholder="Type your message...">
+                    <input type="number" id="realtimeRoomId" placeholder="Room ID">
+                    <input type="number" id="realtimeReceiverId" placeholder="Receiver ID">
+                    <input type="number" id="realtimeFileId" placeholder="File ID">
+                    <button onclick="sendRealtimeMessage()" class="btn-success">
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
+                </div>
             </div>
         </div>
+    </div>
     </div>
 
 <script src="https://unpkg.com/@microsoft/signalr@latest/dist/browser/signalr.js"></script>
     <script>
         const API_BASE = 'http://localhost:5138/api';
-        let authToken = '';
+        let authToken = localStorage.getItem('authToken') || '';
+        let connection = null;
+        let currentUserId = null;
+        let logs = [];
+        let stats = {
+            messagesSent: 0,
+            filesUploaded: 0,
+            friendsCount: 0,
+            roomsJoined: 0
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTheme();
+            loadStats();
+            if (authToken) {
+                getProfile();
+            }
+            updateConnectionStatus('disconnected');
+        });
+
+        // Theme management
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            const icon = document.querySelector('.theme-toggle i');
+            icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            const icon = document.querySelector('.theme-toggle i');
+            icon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        // Statistics management
+        function updateStats() {
+            document.getElementById('statMessages').textContent = stats.messagesSent;
+            document.getElementById('statFiles').textContent = stats.filesUploaded;
+            document.getElementById('statFriends').textContent = stats.friendsCount;
+            document.getElementById('statRooms').textContent = stats.roomsJoined;
+            saveStats();
+        }
+
+        function saveStats() {
+            localStorage.setItem('appStats', JSON.stringify(stats));
+        }
+
+        function loadStats() {
+            const savedStats = localStorage.getItem('appStats');
+            if (savedStats) {
+                stats = { ...stats, ...JSON.parse(savedStats) };
+                updateStats();
+            }
+        }
+
+        function refreshStats() {
+            // Refresh friend count
+            getFriends().then(() => {
+                // Update other stats based on responses
+                showNotification('Statistics refreshed!', 'success');
+            }).catch(() => {
+                showNotification('Failed to refresh statistics', 'error');
+            });
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This will reset statistics and clear logs.')) {
+                localStorage.removeItem('appStats');
+                localStorage.removeItem('authToken');
+                stats = { messagesSent: 0, filesUploaded: 0, friendsCount: 0, roomsJoined: 0 };
+                logs = [];
+                authToken = '';
+                updateStats();
+                clearMessages();
+                showNotification('All data cleared!', 'info');
+            }
+        }
+
+        function exportLogs() {
+            const dataStr = JSON.stringify({ logs, stats }, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `chat-app-logs-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            showNotification('Logs exported successfully!', 'success');
+        }
+
+        // Collapsible sections
+        function toggleCollapse(element) {
+            const content = element.nextElementSibling;
+            const isCollapsed = content.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                content.classList.remove('collapsed');
+                element.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                element.classList.add('collapsed');
+            }
+        }
+
+        // Connection status
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connectionStatus');
+            const icon = statusElement.querySelector('i');
+            const text = statusElement.querySelector('span');
+            
+            if (status === 'connected') {
+                statusElement.className = 'connection-status connected';
+                icon.className = 'fas fa-circle';
+                text.textContent = 'Connected';
+            } else {
+                statusElement.className = 'connection-status disconnected';
+                icon.className = 'fas fa-circle';
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        // Enhanced logging
+        function logActivity(action, data, isError = false) {
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                action,
+                data,
+                isError,
+                userId: currentUserId
+            };
+            logs.push(logEntry);
+            
+            // Keep only last 1000 logs
+            if (logs.length > 1000) {
+                logs = logs.slice(-1000);
+            }
+        }
 
         // Helper functions
         function showResponse(elementId, data, isError = false) {
             const element = document.getElementById(elementId);
             element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
             element.className = isError ? 'response error' : 'response success';
+            
+            logActivity(`Response: ${elementId}`, data, isError);
         }
 
         function getHeaders() {
@@ -188,37 +913,70 @@
                 const data = await response.json();
                 
                 if (!response.ok) throw data;
+                
+                logActivity(`API Call: ${method} ${url}`, { request: body, response: data });
                 return data;
             } catch (error) {
+                logActivity(`API Error: ${method} ${url}`, { request: body, error }, true);
                 throw error;
             }
         }
 
-        // Auth functions
+        // Enhanced auth functions
         async function register() {
             try {
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<div class="loading"></div> Registering...';
+                button.disabled = true;
+
                 const data = await apiCall('/user/register', 'POST', {
                     username: document.getElementById('regUsername').value,
                     email: document.getElementById('regEmail').value,
                     password: document.getElementById('regPassword').value
                 });
+                
                 authToken = data.token;
+                localStorage.setItem('authToken', authToken);
+                currentUserId = data.userId || data.id;
+                
                 showResponse('authResponse', data);
+                showNotification('Registration successful!', 'success');
             } catch (error) {
                 showResponse('authResponse', error, true);
+                showNotification('Registration failed: ' + (error.message || 'Unknown error'), 'error');
+            } finally {
+                const button = event.target;
+                button.innerHTML = '<i class="fas fa-user-plus"></i> Register';
+                button.disabled = false;
             }
         }
 
         async function login() {
             try {
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<div class="loading"></div> Logging in...';
+                button.disabled = true;
+
                 const data = await apiCall('/user/login', 'POST', {
                     email: document.getElementById('loginEmail').value,
                     password: document.getElementById('loginPassword').value
                 });
+                
                 authToken = data.token;
+                localStorage.setItem('authToken', authToken);
+                currentUserId = data.userId || data.id;
+                
                 showResponse('authResponse', data);
+                showNotification('Login successful!', 'success');
             } catch (error) {
                 showResponse('authResponse', error, true);
+                showNotification('Login failed: ' + (error.message || 'Unknown error'), 'error');
+            } finally {
+                const button = event.target;
+                button.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+                button.disabled = false;
             }
         }
 
@@ -226,18 +984,30 @@
             try {
                 await apiCall('/user/logout', 'POST');
                 authToken = '';
+                currentUserId = null;
+                localStorage.removeItem('authToken');
+                
+                if (connection) {
+                    await disconnectSignalR();
+                }
+                
                 showResponse('authResponse', { message: 'Logged out successfully' });
+                showNotification('Logged out successfully!', 'info');
             } catch (error) {
                 showResponse('authResponse', error, true);
+                showNotification('Logout failed: ' + (error.message || 'Unknown error'), 'error');
             }
         }
 
         async function getProfile() {
             try {
                 const data = await apiCall('/user/profile');
+                currentUserId = data.id;
                 showResponse('authResponse', data);
+                return data;
             } catch (error) {
                 showResponse('authResponse', error, true);
+                throw error;
             }
         }
 
@@ -248,17 +1018,23 @@
                     usernameOrEmail: document.getElementById('friendUsername').value
                 });
                 showResponse('friendResponse', data);
+                showNotification('Friend request sent!', 'success');
             } catch (error) {
                 showResponse('friendResponse', error, true);
+                showNotification('Failed to send friend request', 'error');
             }
         }
 
         async function getFriends() {
             try {
                 const data = await apiCall('/friend/list');
+                stats.friendsCount = data.length || 0;
+                updateStats();
                 showResponse('friendResponse', data);
+                return data;
             } catch (error) {
                 showResponse('friendResponse', error, true);
+                throw error;
             }
         }
 
@@ -287,8 +1063,12 @@
                     response: parseInt(document.getElementById('responseType').value)
                 });
                 showResponse('friendResponse', data);
+                showNotification('Response sent!', 'success');
+                // Refresh friends list
+                getFriends();
             } catch (error) {
                 showResponse('friendResponse', error, true);
+                showNotification('Failed to respond to request', 'error');
             }
         }
 
@@ -298,8 +1078,12 @@
                     friendId: parseInt(document.getElementById('removeFriendId').value)
                 });
                 showResponse('friendResponse', data);
+                showNotification('Friend removed!', 'info');
+                // Refresh friends list
+                getFriends();
             } catch (error) {
                 showResponse('friendResponse', error, true);
+                showNotification('Failed to remove friend', 'error');
             }
         }
 
@@ -311,8 +1095,10 @@
                     description: document.getElementById('roomDesc').value
                 });
                 showResponse('roomResponse', data);
+                showNotification('Room created successfully!', 'success');
             } catch (error) {
                 showResponse('roomResponse', error, true);
+                showNotification('Failed to create room', 'error');
             }
         }
 
@@ -328,6 +1114,8 @@
         async function getMyRooms() {
             try {
                 const data = await apiCall('/room/my');
+                stats.roomsJoined = data.length || 0;
+                updateStats();
                 showResponse('roomResponse', data);
             } catch (error) {
                 showResponse('roomResponse', error, true);
@@ -339,8 +1127,11 @@
                 const roomId = document.getElementById('roomIdJoin').value;
                 const data = await apiCall(`/room/${roomId}/join`, 'POST');
                 showResponse('roomResponse', data);
+                showNotification('Joined room successfully!', 'success');
+                getMyRooms(); // Refresh room count
             } catch (error) {
                 showResponse('roomResponse', error, true);
+                showNotification('Failed to join room', 'error');
             }
         }
 
@@ -349,8 +1140,11 @@
                 const roomId = document.getElementById('roomIdJoin').value;
                 const data = await apiCall(`/room/${roomId}/leave`, 'POST');
                 showResponse('roomResponse', data);
+                showNotification('Left room successfully!', 'info');
+                getMyRooms(); // Refresh room count
             } catch (error) {
                 showResponse('roomResponse', error, true);
+                showNotification('Failed to leave room', 'error');
             }
         }
 
@@ -362,16 +1156,22 @@
                 
                 const body = {
                     content: document.getElementById('messageContent').value,
-                    // senderId JWT'den gelecek, göndermiyoruz
                     roomId: roomId ? parseInt(roomId) : null,
                     receiverId: userId ? parseInt(userId) : null,
                     type: 0 // MessageType.Text
                 };
                 
                 const data = await apiCall('/message', 'POST', body);
+                stats.messagesSent++;
+                updateStats();
                 showResponse('messageResponse', data);
+                showNotification('Message sent!', 'success');
+                
+                // Clear message input
+                document.getElementById('messageContent').value = '';
             } catch (error) {
                 showResponse('messageResponse', error, true);
+                showNotification('Failed to send message', 'error');
             }
         }
 
@@ -415,16 +1215,22 @@
             }
         }
 
-        // File upload functions
+        // Enhanced file upload functions
         async function uploadFile() {
             try {
                 const fileInput = document.getElementById('fileInput');
                 const file = fileInput.files[0];
                 
                 if (!file) {
-                    showResponse('fileResponse', { error: 'Dosya seçin' }, true);
+                    showResponse('fileResponse', { error: 'Please select a file' }, true);
+                    showNotification('Please select a file', 'error');
                     return;
                 }
+
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<div class="loading"></div> Uploading...';
+                button.disabled = true;
 
                 const formData = new FormData();
                 formData.append('file', file);
@@ -441,11 +1247,19 @@
                 
                 if (!response.ok) throw data;
                 
-                // File ID'yi otomatik doldur
+                // Auto-fill File ID
                 document.getElementById('fileAttachmentId').value = data.id;
+                stats.filesUploaded++;
+                updateStats();
                 showResponse('fileResponse', data);
+                showNotification('File uploaded successfully!', 'success');
             } catch (error) {
                 showResponse('fileResponse', error, true);
+                showNotification('File upload failed', 'error');
+            } finally {
+                const button = event.target;
+                button.innerHTML = '<i class="fas fa-upload"></i> Upload File';
+                button.disabled = false;
             }
         }
 
@@ -458,7 +1272,8 @@
                 const messageType = document.getElementById('messageType').value;
                 
                 if (!fileId) {
-                    showResponse('fileResponse', { error: 'Önce dosya yükleyin' }, true);
+                    showResponse('fileResponse', { error: 'Please upload a file first' }, true);
+                    showNotification('Please upload a file first', 'error');
                     return;
                 }
                 
@@ -471,49 +1286,102 @@
                 };
                 
                 const data = await apiCall('/message', 'POST', body);
+                stats.messagesSent++;
+                updateStats();
                 showResponse('fileResponse', data);
+                showNotification('File message sent!', 'success');
             } catch (error) {
                 showResponse('fileResponse', error, true);
+                showNotification('Failed to send file message', 'error');
             }
         }
-        let connection = null;
 
+        // Enhanced SignalR functions
         async function connectSignalR() {
             try {
                 if (connection && connection.state === signalR.HubConnectionState.Connected) {
-                    addMessage('Already connected to SignalR');
+                    addMessage('Already connected to SignalR', false, 'info');
                     return;
                 }
 
                 const userId = document.getElementById('connectUserId').value;
                 if (!userId) {
                     addMessage('Please enter User ID', true);
+                    showNotification('Please enter User ID', 'error');
                     return;
                 }
 
-                // Create connection
+                if (!authToken) {
+                    addMessage('Please login first', true);
+                    showNotification('Please login first to connect SignalR', 'error');
+                    return;
+                }
+
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<div class="loading"></div> Connecting...';
+                button.disabled = true;
+
+                // Create connection with proper authentication
                 connection = new signalR.HubConnectionBuilder()
-                    .withUrl(`http://localhost:5138/chatHub?userId=${userId}`, {
-                        accessTokenFactory: () => authToken
+                    .withUrl('http://localhost:5138/chatHub', {
+                        accessTokenFactory: () => authToken,
+                        withCredentials: true
                     })
+                    .withAutomaticReconnect()
                     .build();
 
                 // Set up event handlers
                 connection.on("ReceiveMessage", function (message) {
-                    addMessage(`Message from ${message.senderName}: ${message.content}`);
+                    addMessage(`📨 ${message.sender?.username || 'Unknown'}: ${message.content}`, false, 'success');
+                    showNotification(`New message from ${message.sender?.username || 'Unknown'}`, 'info');
+                });
+
+                connection.on("ReceivePrivateMessage", function (message) {
+                    addMessage(`🔒 Private from ${message.sender?.username || 'Unknown'}: ${message.content}`, false, 'success');
+                    showNotification(`Private message from ${message.sender?.username || 'Unknown'}`, 'info');
                 });
 
                 connection.on("UserJoinedRoom", function (message) {
-                    addMessage(`${message.userName} joined room ${message.roomName}`, false, 'info');
+                    addMessage(`👋 ${message.userName} joined room ${message.roomName}`, false, 'info');
                 });
 
                 connection.on("UserLeftRoom", function (message) {
-                    addMessage(`${message.userName} left room ${message.roomName}`, false, 'info');
+                    addMessage(`👋 ${message.userName} left room ${message.roomName}`, false, 'info');
+                });
+
+                connection.on("FriendRequestReceived", function (senderUsername) {
+                    addMessage(`👥 Friend request from ${senderUsername}`, false, 'info');
+                    showNotification(`Friend request from ${senderUsername}`, 'info');
+                });
+
+                connection.on("Error", function (errorMessage) {
+                    addMessage(`❌ SignalR Error: ${errorMessage}`, true);
+                    showNotification(`SignalR Error: ${errorMessage}`, 'error');
+                });
+
+                connection.on("UserOnline", function (userId) {
+                    addMessage(`🟢 User ${userId} is now online`, false, 'info');
+                });
+
+                connection.on("UserOffline", function (userId) {
+                    addMessage(`🔴 User ${userId} is now offline`, false, 'info');
                 });
 
                 // Start connection
                 await connection.start();
-                addMessage('Connected to SignalR successfully!', false, 'success');
+                addMessage('🚀 Connected to SignalR successfully!', false, 'success');
+                updateConnectionStatus('connected');
+                showNotification('Connected to real-time chat!', 'success');
+
+                // Join chat with the user ID
+                try {
+                    await connection.invoke("JoinChat", userId);
+                    addMessage(`✅ Joined chat as user ${userId}`, false, 'info');
+                } catch (joinError) {
+                    console.error('JoinChat failed:', joinError);
+                    addMessage(`⚠️ Warning: Failed to join chat - ${joinError.message}`, false, 'info');
+                }
                 
                 // Update button states
                 document.querySelector('button[onclick="connectSignalR()"]').disabled = true;
@@ -521,7 +1389,13 @@
 
             } catch (error) {
                 console.error('SignalR connection failed:', error);
-                addMessage(`Connection failed: ${error.message}`, true);
+                addMessage(`❌ Connection failed: ${error.message}`, true);
+                showNotification('Failed to connect to real-time chat', 'error');
+                updateConnectionStatus('disconnected');
+            } finally {
+                const button = event.target;
+                button.innerHTML = '<i class="fas fa-plug"></i> Connect SignalR';
+                button.disabled = false;
             }
         }
 
@@ -530,7 +1404,9 @@
                 if (connection) {
                     await connection.stop();
                     connection = null;
-                    addMessage('Disconnected from SignalR', false, 'info');
+                    addMessage('🔌 Disconnected from SignalR', false, 'info');
+                    updateConnectionStatus('disconnected');
+                    showNotification('Disconnected from real-time chat', 'info');
                     
                     // Update button states
                     document.querySelector('button[onclick="connectSignalR()"]').disabled = false;
@@ -538,75 +1414,226 @@
                 }
             } catch (error) {
                 console.error('SignalR disconnect failed:', error);
-                addMessage(`Disconnect failed: ${error.message}`, true);
+                addMessage(`❌ Disconnect failed: ${error.message}`, true);
+                showNotification('Failed to disconnect', 'error');
             }
         }
 
         async function sendRealtimeMessage() {
             try {
                 if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
-                    addMessage('Not connected to SignalR', true);
+                    addMessage('❌ Not connected to SignalR', true);
+                    showNotification('Please connect to SignalR first', 'error');
                     return;
                 }
 
-                const content = document.getElementById('realtimeMessage').value;
+                const content = document.getElementById('realtimeMessage').value.trim();
                 const roomId = document.getElementById('realtimeRoomId').value;
                 const receiverId = document.getElementById('realtimeReceiverId').value;
                 const fileId = document.getElementById('realtimeFileId').value;
 
-                if (!content.trim()) {
-                    addMessage('Please enter a message', true);
+                if (!content) {
+                    addMessage('❌ Please enter a message', true);
+                    showNotification('Please enter a message', 'error');
                     return;
                 }
 
-                const messageData = {
-                    content: content.trim(),
+                // Create message DTO that matches SendMessageDto
+                const messageDto = {
+                    content: content,
                     roomId: roomId ? parseInt(roomId) : null,
                     receiverId: receiverId ? parseInt(receiverId) : null,
                     fileAttachmentId: fileId ? parseInt(fileId) : null,
-                    type: 0 // Text message
+                    type: 0 // MessageType.Text
                 };
 
-                await connection.invoke("SendMessage", messageData);
+                await connection.invoke("SendMessageWithAuth", messageDto);
                 
                 // Clear input
                 document.getElementById('realtimeMessage').value = '';
-                addMessage(`Message sent: ${content}`, false, 'success');
+                addMessage(`📤 Message sent: ${content}`, false, 'success');
+                stats.messagesSent++;
+                updateStats();
 
             } catch (error) {
                 console.error('Send message failed:', error);
-                addMessage(`Send failed: ${error.message}`, true);
+                addMessage(`❌ Send failed: ${error.message}`, true);
+                showNotification('Failed to send message', 'error');
             }
+        }
+
+        function clearMessages() {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+            showNotification('Messages cleared', 'info');
         }
 
         function addMessage(message, isError = false, type = null) {
             const messagesDiv = document.getElementById('messages');
             const messageElement = document.createElement('div');
-            messageElement.style.padding = '5px';
-            messageElement.style.margin = '2px 0';
-            messageElement.style.borderRadius = '4px';
+            messageElement.style.padding = '8px 12px';
+            messageElement.style.margin = '4px 0';
+            messageElement.style.borderRadius = '6px';
+            messageElement.style.borderLeft = '4px solid';
+            messageElement.style.fontSize = '13px';
+            messageElement.style.fontFamily = 'monospace';
+            messageElement.style.wordBreak = 'break-word';
+            messageElement.style.transition = 'all 0.3s ease';
             
             if (isError) {
-                messageElement.style.backgroundColor = '#ffebee';
-                messageElement.style.color = '#c62828';
-                messageElement.style.border = '1px solid #ef5350';
+                messageElement.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
+                messageElement.style.color = '#dc3545';
+                messageElement.style.borderLeftColor = '#dc3545';
             } else if (type === 'success') {
-                messageElement.style.backgroundColor = '#e8f5e8';
-                messageElement.style.color = '#2e7d32';
-                messageElement.style.border = '1px solid #4caf50';
+                messageElement.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
+                messageElement.style.color = '#28a745';
+                messageElement.style.borderLeftColor = '#28a745';
             } else if (type === 'info') {
-                messageElement.style.backgroundColor = '#e3f2fd';
-                messageElement.style.color = '#1565c0';
-                messageElement.style.border = '1px solid #2196f3';
+                messageElement.style.backgroundColor = 'rgba(23, 162, 184, 0.1)';
+                messageElement.style.color = '#17a2b8';
+                messageElement.style.borderLeftColor = '#17a2b8';
             } else {
-                messageElement.style.backgroundColor = '#f5f5f5';
-                messageElement.style.border = '1px solid #ddd';
+                messageElement.style.backgroundColor = 'rgba(108, 117, 125, 0.1)';
+                messageElement.style.color = 'var(--text-color)';
+                messageElement.style.borderLeftColor = '#6c757d';
             }
             
-            messageElement.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            const timestamp = new Date().toLocaleTimeString();
+            messageElement.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            
             messagesDiv.appendChild(messageElement);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
+            
+            // Add entrance animation
+            messageElement.style.opacity = '0';
+            messageElement.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+                messageElement.style.opacity = '1';
+                messageElement.style.transform = 'translateX(0)';
+            }, 10);
+            
+            // Auto-remove old messages (keep last 100)
+            const messages = messagesDiv.children;
+            if (messages.length > 100) {
+                messagesDiv.removeChild(messages[0]);
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Enter to send real-time message (when focused on real-time input)
+            if (event.key === 'Enter' && event.target.id === 'realtimeMessage' && !event.shiftKey) {
+                event.preventDefault();
+                sendRealtimeMessage();
+            }
+            
+            // Ctrl/Cmd + Enter to send regular message
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && event.target.id === 'messageContent') {
+                event.preventDefault();
+                sendMessage();
+            }
+            
+            // Escape to clear current input
+            if (event.key === 'Escape') {
+                if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                    event.target.value = '';
+                }
+            }
+        });
+
+        // Auto-save form data
+        function saveFormData() {
+            const formData = {
+                regUsername: document.getElementById('regUsername').value,
+                regEmail: document.getElementById('regEmail').value,
+                loginEmail: document.getElementById('loginEmail').value,
+                connectUserId: document.getElementById('connectUserId').value,
+                roomIdJoin: document.getElementById('roomIdJoin').value,
+                targetRoomId: document.getElementById('targetRoomId').value
+            };
+            localStorage.setItem('formData', JSON.stringify(formData));
+        }
+
+        function loadFormData() {
+            const savedData = localStorage.getItem('formData');
+            if (savedData) {
+                const formData = JSON.parse(savedData);
+                Object.keys(formData).forEach(key => {
+                    const element = document.getElementById(key);
+                    if (element) element.value = formData[key];
+                });
+            }
+        }
+
+        // Auto-save form data on input change
+        document.addEventListener('input', function(event) {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                saveFormData();
+            }
+        });
+
+        // Load form data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFormData();
+        });
+
+        // Enhanced error handling
+        window.addEventListener('error', function(event) {
+            console.error('Global error:', event.error);
+            showNotification('An unexpected error occurred', 'error');
+            logActivity('Global Error', { message: event.error.message, stack: event.error.stack }, true);
+        });
+
+        // Enhanced connection monitoring
+        function startConnectionMonitoring() {
+            setInterval(() => {
+                if (connection) {
+                    const state = connection.state;
+                    if (state === signalR.HubConnectionState.Disconnected) {
+                        updateConnectionStatus('disconnected');
+                        document.querySelector('button[onclick="connectSignalR()"]').disabled = false;
+                        document.querySelector('button[onclick="disconnectSignalR()"]').disabled = true;
+                    } else if (state === signalR.HubConnectionState.Connected) {
+                        updateConnectionStatus('connected');
+                    }
+                }
+            }, 5000);
+        }
+
+        // Start monitoring when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            startConnectionMonitoring();
+        });
+
+        // Utility functions for better UX
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('Copied to clipboard!', 'success');
+            }).catch(() => {
+                showNotification('Failed to copy to clipboard', 'error');
+            });
+        }
+
+        // Add copy buttons to response areas
+        document.addEventListener('DOMContentLoaded', function() {
+            const responses = document.querySelectorAll('.response');
+            responses.forEach(response => {
+                const copyBtn = document.createElement('button');
+                copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+                copyBtn.style.position = 'absolute';
+                copyBtn.style.top = '5px';
+                copyBtn.style.right = '30px';
+                copyBtn.style.padding = '5px';
+                copyBtn.style.fontSize = '12px';
+                copyBtn.style.background = 'var(--primary-color)';
+                copyBtn.style.color = 'white';
+                copyBtn.style.border = 'none';
+                copyBtn.style.borderRadius = '3px';
+                copyBtn.style.cursor = 'pointer';
+                copyBtn.onclick = () => copyToClipboard(response.textContent);
+                response.appendChild(copyBtn);
+            });
+        });
     </script>
 </body>
 </html>
