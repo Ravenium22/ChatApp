@@ -83,7 +83,7 @@ builder.Services.AddCors(options =>
         builder =>
         {
             builder
-                .WithOrigins("http://localhost:5138") // Add your frontend URL
+                .WithOrigins("http://localhost:3000", "http://localhost:5138") // ADD localhost:3000 here
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials(); // Important for SignalR

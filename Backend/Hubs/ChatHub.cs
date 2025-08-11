@@ -5,9 +5,11 @@ using Backend.Models;
 using Backend.Services;
 using Backend.DTOs;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Hubs
 {
+    [Authorize]
     public class ChatHub : Hub
     {
         private readonly ApplicationDbContext _context;
@@ -25,6 +27,42 @@ namespace Backend.Hubs
             return UserConnections.TryGetValue(userId, out string? connectionId) ? connectionId : null;
         }
 
+        public override async Task OnConnectedAsync()
+        {
+            // Auto-map authenticated user and auto-join their rooms so no manual JoinChat is required
+            var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int userId))
+            {
+                UserConnections[userId.ToString()] = Context.ConnectionId;
+
+                // Add this connection to a per-user group for reliable private messages
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"User-{userId}");
+
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    user.IsOnline = true;
+                    user.LastSeen = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+
+                await Clients.All.SendAsync("UserOnline", userId.ToString());
+
+                // Join all room groups the user is a member of
+                var roomIds = await _context.RoomUsers
+                    .Where(ru => ru.UserId == userId && ru.IsActive)
+                    .Select(ru => ru.RoomId)
+                    .ToListAsync();
+
+                foreach (var roomId in roomIds)
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, $"Room-{roomId}");
+                }
+            }
+
+            await base.OnConnectedAsync();
+        }
+
         public async Task JoinChat(string userId)
         {
             if (!int.TryParse(userId, out int userIdInt))
@@ -35,6 +73,9 @@ namespace Backend.Hubs
 
             // user'ı connection'a map et
             UserConnections[userId] = Context.ConnectionId;
+
+            // Also ensure per-user SignalR group membership
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"User-{userIdInt}");
 
             // kullanıcıyı online yap
             var user = await _context.Users.FindAsync(userIdInt);
@@ -239,6 +280,13 @@ namespace Backend.Hubs
                         .SendAsync("ReceivePrivateMessage", messageData);
                 }
 
+                // Also broadcast to per-user groups for reliability (all tabs/devices)
+                await Clients.Group($"User-{receiverId.Value}")
+                    .SendAsync("ReceivePrivateMessage", messageData);
+                await Clients.Group($"User-{senderId}")
+                    .SendAsync("ReceivePrivateMessage", messageData);
+
+                // Ensure caller gets it too
                 await Clients.Caller.SendAsync("ReceivePrivateMessage", messageData);
             }
         }

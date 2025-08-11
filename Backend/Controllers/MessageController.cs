@@ -5,6 +5,8 @@ using Backend.Models;
 using Backend.DTOs;
 using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+using Backend.Hubs;
 
 namespace Backend.Controllers
 {
@@ -15,11 +17,13 @@ namespace Backend.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly JwtService _jwtService;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public MessageController(ApplicationDbContext context, JwtService jwtService)
+        public MessageController(ApplicationDbContext context, JwtService jwtService, IHubContext<ChatHub> hubContext)
         {
             _context = context;
             _jwtService = jwtService;
+            _hubContext = hubContext;
         }
 
         // GET: api/messages/room/5 - odanın mesajlarını çek
@@ -165,14 +169,11 @@ namespace Backend.Controllers
             if (!userId.HasValue)
                 return Unauthorized();
 
-            // SenderId'yi JWT token'dan al (güvenlik için)
             var actualSenderId = userId.Value;
 
-            // Content validation - text mesaj için required, file mesaj için optional
             if (request.Type == MessageType.Text && string.IsNullOrWhiteSpace(request.Content))
                 return BadRequest("Text mesaj için content gerekli");
 
-            // File attachment kontrolü
             FileAttachment? fileAttachment = null;
             if (request.FileAttachmentId.HasValue)
             {
@@ -184,31 +185,19 @@ namespace Backend.Controllers
                     return BadRequest("File attachment bulunamadı veya size ait değil");
             }
 
-            // Room mesajı ise
             if (request.RoomId.HasValue)
             {
-                // Room var mı ve kullanıcı üye mi kontrol et
                 var isMember = await _context.RoomUsers
                     .AnyAsync(ru => ru.RoomId == request.RoomId && ru.UserId == actualSenderId && ru.IsActive);
 
                 if (!isMember)
                     return BadRequest("Bu odaya mesaj gönderme yetkiniz yok");
             }
-            // Private mesaj ise
             else if (request.ReceiverId.HasValue)
             {
-                // Receiver var mı kontrol et
                 var receiverExists = await _context.Users.AnyAsync(u => u.Id == request.ReceiverId);
                 if (!receiverExists)
                     return NotFound("Alıcı bulunamadı");
-
-                // TODO: Arkadaş kontrolü - şimdilik kapalı (test için)
-                // var areFriends = await _context.Friendships
-                //     .AnyAsync(f => (f.UserId == actualSenderId && f.FriendId == request.ReceiverId) ||
-                //                   (f.UserId == request.ReceiverId && f.FriendId == actualSenderId));
-
-                // if (!areFriends)
-                //     return BadRequest("Bu kişiye mesaj gönderebilmek için arkadaş olmanız gerekir");
             }
             else
             {
@@ -218,7 +207,7 @@ namespace Backend.Controllers
             var message = new Message
             {
                 Content = request.Content ?? string.Empty,
-                SenderId = actualSenderId, // JWT'den gelen ID'yi kullan
+                SenderId = actualSenderId,
                 RoomId = request.RoomId,
                 ReceiverId = request.ReceiverId,
                 Type = request.Type,
@@ -229,7 +218,6 @@ namespace Backend.Controllers
             _context.Messages.Add(message);
             await _context.SaveChangesAsync();
 
-            // mesajı sender bilgileriyle birlikte return et
             var savedMessage = await _context.Messages
                 .Include(m => m.Sender)
                 .Include(m => m.Receiver)
@@ -282,7 +270,29 @@ namespace Backend.Controllers
                 })
                 .FirstAsync();
 
-            // Room mesajı ise CreatedAtAction, private mesaj ise Ok() döndür
+            // NEW: Broadcast over SignalR so others receive in real time
+            if (message.RoomId.HasValue)
+            {
+                await _hubContext.Clients.Group($"Room-{message.RoomId.Value}")
+                    .SendAsync("ReceiveMessage", savedMessage);
+            }
+            else if (message.ReceiverId.HasValue)
+            {
+                // To receiver: per-user group
+                await _hubContext.Clients.Group($"User-{message.ReceiverId.Value}")
+                    .SendAsync("ReceivePrivateMessage", savedMessage);
+                // To receiver: direct connection if mapped
+                var receiverConn = ChatHub.GetUserConnectionId(message.ReceiverId.Value.ToString());
+                if (!string.IsNullOrEmpty(receiverConn))
+                {
+                    await _hubContext.Clients.Client(receiverConn)
+                        .SendAsync("ReceivePrivateMessage", savedMessage);
+                }
+                // To sender: keep other tabs/devices in sync
+                await _hubContext.Clients.Group($"User-{message.SenderId}")
+                    .SendAsync("ReceivePrivateMessage", savedMessage);
+            }
+
             if (message.RoomId.HasValue)
             {
                 return CreatedAtAction(nameof(GetRoomMessages), new { roomId = message.RoomId }, savedMessage);
